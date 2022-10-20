@@ -64,4 +64,6 @@ config MODULES
 	  this option alone doesn't change the build on its own, it only allows
 	  using 'm' for tristate Kconfig options.
 
+source "subsys/fpga_manager/Kconfig"
+
 endmenu
