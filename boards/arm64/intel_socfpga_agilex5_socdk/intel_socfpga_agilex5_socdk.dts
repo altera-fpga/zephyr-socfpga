@@ -44,3 +44,11 @@
 		status = "okay";
 	};
 };
+
+&dma0 {
+	status = "okay";
+};
+
+&dma1 {
+	status = "okay";
+};
