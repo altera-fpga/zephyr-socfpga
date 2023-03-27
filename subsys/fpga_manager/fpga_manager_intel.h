@@ -48,6 +48,9 @@
 #define RECONFIG_SOFTFUNC_STATUS_SEU_ERROR	  BIT(3)
 #define RECONFIG_PIN_STATUS_NSTATUS		      BIT(31)
 
+#define FPGA_FULL_CONFIGURATION 0
+#define FPGA_PARTIAL_CONFIGURATION 1
+
 #define MBOX_REQUEST_HEADER(cmd_id, cmd_mode, len)                                                 \
 	((cmd_id << MBOX_CMD_CODE_OFFSET) & (MBOX_CMD_ID_MASK)) |                                  \
 		((cmd_mode << MBOX_CMD_MODE_OFFSET) & (MBOX_CMD_MODE_MASK)) |                      \
@@ -152,8 +155,14 @@ struct fm_lock_data {
 
 struct fm_private_data {
 	uint32_t reconfig_data_send_done;
+	uint32_t config_type;
 	struct fm_lock_data *private_data_lock;
 	struct fpga_config_status config_status;
+};
+
+struct fm_config_info {
+	uint32_t config_type;
+	const struct device *dev;
 };
 
 enum smc_cmd_code {
@@ -178,6 +187,8 @@ enum fpga_config_stages {
 	FPGA_CONFIG_INIT,
 	/* Disable all bridges */
 	FPGA_BRIDGE_DISABLE,
+	/* Freeze fpga region*/
+	FPGA_FREEZE_REGION,
 	/* FPGA cancel stage */
 	FPGA_CANCEL_STAGE,
 	/* Send the Reconfig command*/
@@ -188,6 +199,8 @@ enum fpga_config_stages {
 	FPGA_RECONFIG_CHECK_STATUS,
 	/* Enable all bridges after Reconfig success */
 	FPGA_BRIDGE_ENABLE,
+	/* Un-freeze fpga region*/
+	FPGA_UNFREEZE_REGION,
 	/* Error exit stage */
 	FPGA_RECONFIG_EXIT
 };

@@ -372,6 +372,7 @@ int32_t do_bridge_reset_plat(uint32_t enable, uint32_t mask)
 	ret = is_fpga_config_not_ready();
 	if (ret) {
 		LOG_ERR("FPGA not ready. Bridge reset aborted!");
+		svc_client_close();
 		return -EIO;
 	}
 

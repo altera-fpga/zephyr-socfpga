@@ -34,20 +34,23 @@ int32_t fpga_get_status(void *status);
  * If the pointer and size is outside of reserved memory range, shall copy the bitstream into
  * the reserved memory.
  * @param[in] byte_size Bitstream size in byte
+ * @param[in] config_type FPGA configuration type
+ * @param[in] dev Freeze controller device
  *
  * @return 0 on success, negative errno code on fail
  */
-int32_t fpga_load(char *image_ptr, uint32_t byte_size);
+int32_t fpga_load(char *image_ptr, uint32_t byte_size, uint32_t config_type, char *dev);
 
 /**
  * @brief Configures the FPGA with given bitstream file in file system.
  *
  * @param[in] filename Bitstream file that will be used to configure the FPGA.
  * @param[in] config_type Configuration type Full and Partial configuration
+ * @param[in] dev Freeze controller device
  *
  * @return 0 on success, negative errno code on fail
  */
-int32_t fpga_load_file(const char *filename, uint32_t config_type);
+int32_t fpga_load_file(const char *filename, uint32_t config_type, char *dev);
 
 /**
  * @brief Get the memory address and size to store the bitstream.

@@ -10,6 +10,7 @@
 #include <stdio.h>
 
 #include <zephyr/device.h>
+#include <zephyr/drivers/freeze_controller.h>
 #include <zephyr/fs/fs.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
@@ -41,6 +42,7 @@ static uint32_t fpga_reconfig_dma_count;
 static uint32_t fpga_reconfig_dma_block_size;
 static struct sip_svc_controller *mb_smc_dev;
 static struct k_mutex config_state;
+static struct fm_config_info config_info;
 static struct k_thread config_thread_data;
 
 /**
@@ -236,6 +238,11 @@ static void cmd_send_callback(uint32_t c_token, struct sip_svc_response *respons
 
 	LOG_DBG("sip_svc send command callback\n");
 	LOG_DBG("\tresponse data=\n");
+	LOG_DBG("\theader=%08x\n", response->header);
+	LOG_DBG("\ta0=%016lx\n", response->a0);
+	LOG_DBG("\ta1=%016lx\n", response->a1);
+	LOG_DBG("\ta2=%016lx\n", response->a2);
+	LOG_DBG("\ta3=%016lx\n", response->a3);
 
 	/* Condition to check only for the mailbox command not for the non-mailbox command */
 	if (response->resp_data_size) {
@@ -329,7 +336,11 @@ static void cmd_send_callback(uint32_t c_token, struct sip_svc_response *respons
 					resp_data[MBOX_RECONFIG_STATUS_ERROR_DETAILS];
 
 				if (!private_data->config_status.state) {
-					curr_stage = FPGA_BRIDGE_ENABLE;
+					if (private_data->config_type) {
+						curr_stage = FPGA_UNFREEZE_REGION;
+					} else {
+						curr_stage = FPGA_BRIDGE_ENABLE;
+					}
 				} else if (private_data->config_status.state !=
 						   MBOX_CONFIG_STATUS_STATE_CONFIG &&
 					   private_data->config_status.state !=
@@ -604,8 +615,6 @@ static int32_t smc_send(uint32_t cmd_type, uint64_t function_identifier, uint32_
  */
 static void reconfig_start(void *p1, void *p2, void *p3)
 {
-	ARG_UNUSED(p3);
-
 	char *image_ptr = (char *)p1;
 	uint32_t img_size = POINTER_TO_UINT(p2);
 	uint32_t ret = 0;
@@ -613,6 +622,7 @@ static void reconfig_start(void *p1, void *p2, void *p3)
 	uint64_t function_identifier = 0;
 	uint32_t cmd_id = 0;
 	uint32_t retry_count = 0;
+	struct fm_config_info *config_info = (struct fm_config_info *)p3;
 	struct fm_private_data private_data;
 
 	private_data.private_data_lock =
@@ -622,7 +632,15 @@ static void reconfig_start(void *p1, void *p2, void *p3)
 		k_mutex_unlock(&config_state);
 		return;
 	}
+
+	private_data.config_type = config_info->config_type;
 	k_sem_init(&(private_data.private_data_lock->reconfig_data_sem), 0, 1);
+
+	if (config_info->config_type == FPGA_FULL_CONFIGURATION) {
+		curr_stage = FPGA_BRIDGE_DISABLE;
+	} else {
+		curr_stage = FPGA_CONFIG_INIT;
+	}
 
 	while (true) {
 		switch (curr_stage) {
@@ -635,6 +653,7 @@ static void reconfig_start(void *p1, void *p2, void *p3)
 				curr_stage = FPGA_CONFIG_INIT;
 			} else {
 				LOG_ERR("All bridge disable failed");
+				reconfig_progress = 0;
 				k_mutex_unlock(&config_state);
 				return;
 			}
@@ -646,13 +665,28 @@ static void reconfig_start(void *p1, void *p2, void *p3)
 			ret = svc_client_open();
 			if (!ret) {
 				LOG_DBG("Client init Success !!");
-				curr_stage = FPGA_CANCEL_STAGE;
+				if (config_info->config_type == FPGA_FULL_CONFIGURATION) {
+					curr_stage = FPGA_CANCEL_STAGE;
+				} else {
+					curr_stage = FPGA_FREEZE_REGION;
+				}
 			} else {
-				LOG_ERR("Client init Failed !!");
+				LOG_ERR("All bridge disable failed");
+				reconfig_progress = 0;
 				k_mutex_unlock(&config_state);
 				return;
 			}
 			break;
+
+		case FPGA_FREEZE_REGION:
+			/* Will freeze the fpga region */
+			LOG_DBG("Sending FPGA freeze region command");
+			if (fpga_freeze_region(config_info->dev)) {
+				curr_stage = FPGA_RECONFIG_EXIT;
+			} else {
+				curr_stage = FPGA_CANCEL_STAGE;
+			}
+			continue;
 
 		case FPGA_CANCEL_STAGE:
 			/* Will cancel the ongoing transaction */
@@ -716,6 +750,15 @@ static void reconfig_start(void *p1, void *p2, void *p3)
 			curr_stage = FPGA_RECONFIG_EXIT;
 			break;
 
+		case FPGA_UNFREEZE_REGION:
+			/* Will unfreeze the fpga region */
+			LOG_DBG("Sending FPGA unfreeze region command");
+			if (fpga_unfreeze_region(config_info->dev)) {
+				LOG_ERR("Failed to unfreeze the region");
+			}
+			curr_stage = FPGA_RECONFIG_EXIT;
+			continue;
+
 		case FPGA_RECONFIG_EXIT:
 			LOG_DBG("FPGA configuration all stages completed !!");
 			k_free(private_data.private_data_lock);
@@ -767,13 +810,13 @@ static int32_t fpga_reconfig_status_validate(struct fpga_config_status *reconfig
 }
 
 /* Create and start the reconfiguration thread */
-uint32_t config_thread_start(char *image_ptr, uint32_t img_size)
+uint32_t config_thread_start(char *image_ptr, uint32_t img_size, struct fm_config_info *config_info)
 {
 	/* Will start Reconfig state from here only */
 	k_tid_t config_tid =
 		k_thread_create(&config_thread_data, reconfig_thread_stack_area,
 				K_KERNEL_STACK_SIZEOF(reconfig_thread_stack_area), reconfig_start,
-				(void *)image_ptr, UINT_TO_POINTER(img_size), NULL,
+				(void *)image_ptr, UINT_TO_POINTER(img_size), (void *)config_info,
 				FPGA_MANAGER_THREAD_PRIORITY, 0, K_NO_WAIT);
 
 	if (!config_tid) {
@@ -802,13 +845,24 @@ int32_t fpga_get_memory_plat(char **phyaddr, uint32_t *size)
 	return 0;
 }
 
-int32_t fpga_load_plat(char *image_ptr, uint32_t img_size)
+int32_t fpga_load_plat(char *image_ptr, uint32_t img_size, uint32_t config_type, char *freeze_ctrl)
 {
 	char *fpga_memory_addr;
 	uint32_t fpga_memory_size = 0;
 
 	if (!image_ptr)
 		return -EFAULT;
+
+	if (config_type != FPGA_FULL_CONFIGURATION && config_type != FPGA_PARTIAL_CONFIGURATION) {
+		return -ENOTSUP;
+	}
+
+	config_info.config_type = config_type;
+	config_info.dev = device_get_binding(freeze_ctrl);
+
+	if (config_type == FPGA_PARTIAL_CONFIGURATION && !config_info.dev) {
+		return -ENODEV;
+	}
 
 	if (fpga_get_memory_plat(&fpga_memory_addr, &fpga_memory_size)) {
 		LOG_ERR("Failed to get the reserve memory pointer!!");
@@ -831,7 +885,7 @@ int32_t fpga_load_plat(char *image_ptr, uint32_t img_size)
 		return -EFAULT;
 	}
 
-	if (config_thread_start(image_ptr, img_size)) {
+	if (config_thread_start(image_ptr, img_size, &config_info)) {
 		return -EINVAL;
 	}
 
@@ -839,16 +893,22 @@ int32_t fpga_load_plat(char *image_ptr, uint32_t img_size)
 }
 
 /* Read the file content and copy at the fpga reserved memory region and send the data to SDM */
-int32_t fpga_load_file_plat(const char *filename, uint32_t config_type)
+int32_t fpga_load_file_plat(const char *filename, uint32_t config_type, char *freeze_ctrl)
 {
+	char *fpga_memory_addr = NULL;
 	int32_t ret_val;
 	uint32_t img_size = 0;
 	uint32_t fpga_memory_size = 0;
-	char *fpga_memory_addr = NULL;
 
-	/* Partial configuration not supported */
-	if (config_type) {
+	if (config_type != FPGA_FULL_CONFIGURATION && config_type != FPGA_PARTIAL_CONFIGURATION) {
 		return -ENOTSUP;
+	}
+
+	config_info.config_type = config_type;
+	config_info.dev = device_get_binding(freeze_ctrl);
+
+	if (config_type == FPGA_PARTIAL_CONFIGURATION && !config_info.dev) {
+		return -ENODEV;
 	}
 
 	if (k_mutex_lock(&config_state, K_NO_WAIT)) {
@@ -879,7 +939,7 @@ int32_t fpga_load_file_plat(const char *filename, uint32_t config_type)
 	img_size = ret_val;
 	k_mutex_unlock(&config_state);
 
-	ret_val = config_thread_start(fpga_memory_addr, img_size);
+	ret_val = config_thread_start(fpga_memory_addr, img_size, &config_info);
 	if (ret_val) {
 		LOG_ERR("Reconfiguration Failed!!");
 		reconfig_progress = 0;

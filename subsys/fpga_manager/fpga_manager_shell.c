@@ -8,6 +8,7 @@
 
 #include <zephyr/fpga_manager/fpga_manager.h>
 #include <zephyr/shell/shell.h>
+#include <zephyr/drivers/freeze_controller.h>
 
 static int32_t cmd_fpga_load(const struct shell *sh, size_t argc, char **argv)
 {
@@ -21,7 +22,7 @@ static int32_t cmd_fpga_load(const struct shell *sh, size_t argc, char **argv)
 		return -EINVAL;
 	}
 
-	err = fpga_load_file(argv[1], config_type);
+	err = fpga_load_file(argv[1], config_type, argv[3]);
 
 	if (err) {
 		if (err == -EBUSY) {
@@ -34,6 +35,8 @@ static int32_t cmd_fpga_load(const struct shell *sh, size_t argc, char **argv)
 			shell_print(sh, "No such file or directory %s", argv[1]);
 		} else if (err == -ENOTSUP) {
 			shell_print(sh, "FPGA configuration not supported");
+		} else if (err == -ENODEV) {
+			shell_print(sh, "No such device found");
 		} else {
 			shell_print(sh, "Failed to start the reconfiguration");
 		}
@@ -76,13 +79,12 @@ static int32_t cmd_fpga_status(const struct shell *sh, size_t argc, char **argv)
 	return ret;
 }
 
-SHELL_STATIC_SUBCMD_SET_CREATE(sub_fpga_manager,
-			       SHELL_CMD_ARG(load, NULL,
-					     "Configure FPGA <filename> [type 0:FULL 1:PARTIAL]",
-					     cmd_fpga_load, 3, 0),
-			       SHELL_CMD_ARG(status, NULL, "Get FPGA configuration status",
-					     cmd_fpga_status, 1, 0),
-			       SHELL_SUBCMD_SET_END /* Array terminated */
+SHELL_STATIC_SUBCMD_SET_CREATE(
+	sub_fpga_manager,
+	SHELL_CMD_ARG(load, NULL, "Configure FPGA <filename> [type 0:FULL 1:PARTIAL] <device>",
+		      cmd_fpga_load, 3, 1),
+	SHELL_CMD_ARG(status, NULL, "Get FPGA configuration status", cmd_fpga_status, 1, 0),
+	SHELL_SUBCMD_SET_END /* Array terminated */
 );
 
 SHELL_CMD_REGISTER(fpga_manager, &sub_fpga_manager, "FPGA manager commands", NULL);
