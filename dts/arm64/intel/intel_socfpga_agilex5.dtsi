@@ -99,6 +99,21 @@
 		reg = <0x80100000 DT_SIZE_M(8)>;
 	};
 
+	freeze_controller0: freeze_controller0@f9000450 {
+		compatible = "intel,freeze-controller";
+		reg = <0xf9000450 0x00000010>;
+		status = "disabled";
+	};
+
+	fpga_config: fpga@80900000 {
+	/* Reserve Memory For FPGA Config */
+		compatible = "zephyr,memory-region";
+		device_type = "memory";
+		reg = <0x80900000 DT_SIZE_M(16)>;
+		zephyr,memory-region = "FPGA_RESERVED";
+		status = "okay";
+	};
+
 	/* This qspi setting included
 	 * The QSPI controller register and
 	 * The QSPI data register
