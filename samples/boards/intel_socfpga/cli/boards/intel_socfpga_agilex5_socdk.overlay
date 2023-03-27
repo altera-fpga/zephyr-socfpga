@@ -69,3 +69,6 @@
 	status = "okay";
 };
 
+&freeze_controller0 {
+	status = "okay";
+};

@@ -1,0 +1,9 @@
+# FPGA freeze controller driver configuration option
+
+# Copyright (c) 2023, Intel Corporation. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+config AGILEX_FC_FPGA
+	bool "Intel Agilex series FPGA freeze controller driver"
+	help
+	  Enable Intel Agilex series FPGA freeze controller driver.
