@@ -31,6 +31,10 @@ zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_AMBIQ               clock_cont
 zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_PWM                 clock_control_pwm.c)
 zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_RPI_PICO            clock_control_rpi_pico.c)
 
+zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_AGILEX              clock_control_agilex_ll.c)
+zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_AGILEX              clock_control_agilex.c)
+zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_AGILEX5             clock_control_agilex5_ll.c)
+zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_AGILEX5             clock_control_agilex5.c)
 
 if(CONFIG_CLOCK_CONTROL_STM32_CUBE)
   zephyr_library_sources_ifdef(CONFIG_CLOCK_STM32_MUX clock_stm32_mux.c)
@@ -63,11 +67,6 @@ else()
   zephyr_library_sources_ifdef(CONFIG_SOC_SERIES_STM32WLX clock_stm32l4_l5_wb_wl.c)
 endif()
 endif()
-
-zephyr_library_sources_ifdef(CONFIG_SOC_SERIES_AGILEX clock_agilex_ll.c)
-zephyr_library_sources_ifdef(CONFIG_SOC_SERIES_AGILEX clock_agilex.c)
-zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_AGILEX5 clock_control_agilex5_ll.c)
-zephyr_library_sources_ifdef(CONFIG_CLOCK_CONTROL_AGILEX5 clock_control_agilex5.c)
 
 if(CONFIG_CLOCK_CONTROL_RCAR_CPG_MSSR)
   zephyr_library_sources(clock_control_renesas_cpg_mssr.c)
