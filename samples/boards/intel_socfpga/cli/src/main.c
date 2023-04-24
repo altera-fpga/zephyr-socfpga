@@ -7,7 +7,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
-void main(void)
+int main(void)
 {
-	printk("%s: Starting Shell...\n", CONFIG_BOARD);
+	printk("%s: Starting Command Line Interface...\n", CONFIG_BOARD);
 }
