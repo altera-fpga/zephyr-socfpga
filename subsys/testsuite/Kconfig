@@ -96,6 +96,13 @@ config FORCE_COVERAGE
 	  does not guarantee that coverage data will be gathered.
 	  Application may not fit memory or crash at runtime.
 
+config COVERAGE_SHELL
+	bool "Coverage shell"
+	default y
+	depends on SHELL && COVERAGE && !COVERAGE_DUMP
+	help
+	  Start coverage dump to console using the coverage shell command.
+
 config TEST_USERSPACE
 	bool "Indicate that this test exercises user mode"
 	help
