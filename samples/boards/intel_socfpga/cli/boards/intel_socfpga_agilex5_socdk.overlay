@@ -60,3 +60,12 @@
 	status = "okay";
 	zephyr,num-clients = <2>;
 };
+
+&io96b0 {
+	status = "okay";
+};
+
+&io96b1 {
+	status = "okay";
+};
+
