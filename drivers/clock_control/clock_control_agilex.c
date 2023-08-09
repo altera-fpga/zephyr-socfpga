@@ -56,6 +56,9 @@ static int clock_get_rate(const struct device *dev, clock_control_subsys_t sub_s
 	case INTEL_SOCFPGA_CLOCK_TIMER:
 		*rate = get_timer_clk();
 		break;
+	case INTEL_SOCFPGA_CLOCK_QSPI:
+		*rate = get_qspi_clk();
+		break;
 	default:
 		LOG_ERR("Clock ID %ld is not supported\n", (intptr_t)sub_system);
 		return -ENOTSUP;
