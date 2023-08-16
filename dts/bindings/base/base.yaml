@@ -92,3 +92,11 @@ properties:
   mbox-names:
     type: string-array
     description: Provided names of mailbox / IPM channel specifiers
+
+  resets:
+    type: phandle-array
+    description: get reset line value
+
+  shared-irqs:
+    type: phandles
+    description: phandle to interrupt controller node
