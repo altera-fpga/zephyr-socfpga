@@ -214,6 +214,7 @@
 /drivers/dma/*rpi_pico*                   @soburi
 /drivers/dma/*xmc4xxx*                    @talih0
 /drivers/iossm/                           @Smale-12048867
+/drivers/ilc/                             @nbalabak
 /drivers/eeprom/eeprom_stm32.c            @KwonTae-young
 /drivers/entropy/*b91*                    @andy-liu-telink
 /drivers/entropy/*bt_hci*                 @JordanYates
