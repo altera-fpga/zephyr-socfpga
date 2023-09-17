@@ -1,6 +1,5 @@
-# Copyright (c) 2020 Intel Corp.
+# Copyright (c) 2023 Intel Corp.
 # SPDX-License-Identifier: Apache-2.0
-#
 # EDAC configuration options
 
 menuconfig EDAC
@@ -31,5 +30,8 @@ config EDAC_IBECC
 module = EDAC
 module-str = edac
 source "subsys/logging/Kconfig.template.log_config"
+
+source "drivers/edac/edac_intel_socfpga/Kconfig"
+source "drivers/edac/edac_ibecc/Kconfig"
 
 endif #EDAC
