@@ -52,3 +52,7 @@
 	status = "okay";
 	zephyr,num-clients = <5>;
 };
+
+&hps_ecc {
+	status = "okay";
+};
