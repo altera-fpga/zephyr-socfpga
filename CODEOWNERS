@@ -361,6 +361,7 @@
 /drivers/serial/Kconfig.it8xxx2           @GTLin08
 /drivers/serial/uart_ite_it8xxx2.c        @GTLin08
 /drivers/serial/*intel_lw*                @shilinte
+/drivers/seu/                             @nbalabak
 /drivers/disk/sdmmc_sdhc.h                @JunYangNXP
 /drivers/disk/sdmmc_stm32.c               @anthonybrandon
 /drivers/ptp_clock/                       @tbursztyka @jukkar
