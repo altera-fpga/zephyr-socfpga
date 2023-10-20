@@ -43,12 +43,10 @@ static int32_t do_bridge(const struct shell *sh, size_t argc, char **argv)
 
 	/* FPGA operation status */
 	if (ret) {
-		if (ret == -EBUSY) {
-			shell_print(sh, "FPGA not ready. Bridge reset aborted!");
+		if (ret == -EIO) {
+			shell_print(sh, "FPGA not configured");
 		} else if (ret == -ENOMSG) {
 			shell_print(sh, "Bridge reset failed");
-		} else if (ret == -EIO) {
-			shell_print(sh, "FPGA not configured");
 		} else if (ret == -ENOTSUP) {
 			shell_print(sh, "Please provide mask in correct range");
 		} else {

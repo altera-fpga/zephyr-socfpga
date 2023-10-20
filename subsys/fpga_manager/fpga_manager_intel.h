@@ -163,6 +163,8 @@ enum smc_cmd_code {
 	FPGA_ALL_BRIDGE_ENABLE = 0x01,
 	/* SMC Cancel Command */
 	FPGA_CANCEL = 0x03,
+	/* SMC COMMAND ID to check Reconfig status to SDM via mailbox */
+	FPGA_CONFIG_STATUS = 0x04,
 	/* SMC COMMAND ID to send Reconfig signal to SDM via mailbox */
 	FPGA_RECONFIG = 0x06,
 	/* SMC COMMAND ID to send Reconfig data to SDM via mailbox */
