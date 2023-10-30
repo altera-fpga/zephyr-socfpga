@@ -474,4 +474,18 @@
 			reg = <0x108CC000 0x100>;
 		};
 	};
+
+	smmu: smmu@16000000 {
+		compatible = "arm,smmu-v3";
+		reg = <0x16000000 0x23000>;
+		interrupt-parent = <&gic>;
+		interrupts = <GIC_SPI 129 IRQ_TYPE_EDGE	/* global interrupt */
+				 IRQ_DEFAULT_PRIORITY>,
+			     <GIC_SPI 134 IRQ_TYPE_EDGE	/* event queue interrupt */
+				 IRQ_DEFAULT_PRIORITY>;
+		status = "disabled";
+		cmdq-entries = <16>;
+		eventq-entries = <16>;
+		max-streams = <16>;
+	};
 };

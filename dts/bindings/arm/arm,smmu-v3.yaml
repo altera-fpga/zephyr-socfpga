@@ -1,0 +1,31 @@
+# Copyright (c) 2023, Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+description: ARM System Memory Management Unit V3
+
+compatible: "arm,smmu-v3"
+
+include: [base.yaml]
+
+properties:
+  reg:
+    required: true
+
+  cmdq-entries:
+    type: int
+    required: true
+    description: Maximum number of command queue entries as (cmdq-entries = 2^x).
+
+  eventq-entries:
+    type: int
+    required: true
+    description: Maximum number of event queue entries as (eventq-entries = 2^x)
+
+  priq-entries:
+    type: int
+    description: Maximum number of page request queue entries as (priq-entries = 2^x)
+
+  max-streams:
+    type: int
+    required: true
+    description: Maximum number of stream ID's supported. (max-streams = 2^x)
