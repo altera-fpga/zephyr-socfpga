@@ -1,0 +1,15 @@
+# ARM SMMU V3 driver configuration options
+
+# Copyright (c) 2023 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+#
+# ARM SMMU V3 driver options
+#
+
+config ARM_SMMU_V3_DRIVER
+	bool "ARM SMMU V3 Driver"
+	default y
+	depends on DT_HAS_ARM_SMMU_V3_ENABLED
+	help
+	  Enable the ARM SMMU V3 driver

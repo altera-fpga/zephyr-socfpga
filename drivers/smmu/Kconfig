@@ -1,0 +1,36 @@
+# ARM SMMU driver configuration options
+
+# Copyright (c) 2023 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+#
+# ARM SMMU driver options
+#
+
+menuconfig SMMU
+	bool "ARM SMMU Driver"
+	help
+	  Enable the ARM SMMU Driver
+
+if SMMU
+
+module = SMMU
+module-dep = LOG
+module-str = Log level for ARM SMMU Driver
+module-help = Sets log level for ARM SMMU Driver.
+source "subsys/logging/Kconfig.template.log_config"
+
+choice
+	prompt "Select the SMMU Version"
+	default ARM_SMMU_V3
+
+config ARM_SMMU_V3
+	bool "ARM SMMU V3"
+
+endchoice
+
+if ARM_SMMU_V3
+source "drivers/smmu/Kconfig.smmu_v3"
+endif
+
+endif # ARM_SMMU
