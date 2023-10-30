@@ -72,3 +72,7 @@
 &freeze_controller0 {
 	status = "okay";
 };
+
+&smmu {
+	status = "okay";
+};
