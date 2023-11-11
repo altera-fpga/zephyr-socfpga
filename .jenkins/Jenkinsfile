@@ -122,7 +122,7 @@ pipeline {
                               tty: true
                               imagePullPolicy: Always
                             - name: ${containerName}
-                              image: 'amr-registry-pre.caas.intel.com/pse-pswe-software-ba/embedded_kw:ubuntu20.04.3-sys-gsrd-15.1'
+                              image: 'amr-registry-pre.caas.intel.com/pse-pswe-software-ba/embedded_kw:ubuntu20.04.3-sys-gsrd-16.5'
                               tty: true
                               imagePullPolicy: Always
                               restartPolicy: "Never"

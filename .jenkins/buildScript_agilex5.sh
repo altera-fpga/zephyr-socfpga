@@ -18,7 +18,7 @@ ZEPHYR_BRANCH=$2
 cd /nfs/site/home/sys_gsrd
 source /nfs/site/home/sys_gsrd/.bashrc
 lsb_release -a
-export PATH=/build/zephyr-sdk-0.15.1:/build/zephyrproject/.venv/bin:$PATH
+export PATH=/build/zephyr-sdk-0.16.5:/build/zephyrproject/.venv/bin:$PATH
 export CCACHE_DIR=/build/ccache
 unset CROSS_COMPILE
 PROJECT_NAME="building-zephyr-project"
