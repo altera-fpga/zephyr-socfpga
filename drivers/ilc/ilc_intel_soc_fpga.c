@@ -35,7 +35,7 @@
 /* Check data valid for given bit in registers */
 #define ILC_GET_VLD_BIT(val, pos) FIELD_GET(BIT(pos), val)
 /* Global enable bit position */
-#define ILC_GLOBAL_ENABLE_BIT     BIT(0)
+#define ILC_GLOBAL_ENABLE_BIT     0
 /* Interrupt pulse type */
 #define ILC_IRQ_PULSE_SENSE       1
 /* Maximum port count per ILC */
@@ -84,7 +84,7 @@ static int lookup_table_irq(const struct device *ilc_dev, uint32_t irq_number)
 {
 	struct intel_soc_fpga_ilc_data *ilc_data = ilc_dev->data;
 
-	for (int index = 0; index < ILC_MAX_PORTS; index++) {
+	for (int index = 0; index < ilc_data->port_count; index++) {
 		if (ilc_data->irq_table_data[index] == irq_number) {
 			return index;
 		}
@@ -115,7 +115,7 @@ static int ilc_intel_soc_fpga_read_port(const struct device *ilc_dev, uint32_t *
 static int ilc_intel_soc_fpga_read_params(const struct device *ilc_dev, struct ilc_params *params)
 {
 	struct intel_soc_fpga_ilc_data *ilc_data = ilc_dev->data;
-	uintptr_t ilc_base_address = DEVICE_MMIO_GET(ilc_dev);
+	uintptr_t ilc_base_address = ilc_data->ilc_base_address;
 
 	if (!ilc_data->enabled) {
 		LOG_ERR("Device not enabled");
@@ -173,11 +173,11 @@ static int ilc_interrupt_isr(const struct device *ilc_dev, uint32_t irq_number)
 	uint32_t reg_status = 0;
 	uint8_t active_counter_port = 0;
 	struct intel_soc_fpga_ilc_data *ilc_data = ilc_dev->data;
-	uintptr_t ilc_base_address = DEVICE_MMIO_GET(ilc_dev);
+	uintptr_t ilc_base_address = ilc_data->ilc_base_address;
 
 	reg_status = lookup_table_irq(ilc_dev, irq_number);
 
-	if (reg_status != 0) {
+	if (reg_status < 0) {
 		LOG_ERR("IRQ number not found");
 		return reg_status;
 	}
@@ -200,7 +200,7 @@ int ilc_intel_soc_fpga_enable(const struct device *ilc_dev)
 	int ret = 0;
 	struct intel_soc_fpga_ilc_data *ilc_data = ilc_dev->data;
 	const struct intel_soc_fpga_ilc_config *ilc_config = ilc_dev->config;
-	uintptr_t ilc_base_address = DEVICE_MMIO_GET(ilc_dev);
+	uintptr_t ilc_base_address = ilc_data->ilc_base_address;
 
 	ilc_data->current_counter = -1;
 
@@ -264,9 +264,8 @@ int ilc_intel_soc_fpga_disable(const struct device *ilc_dev)
 	int ret = 0;
 	struct intel_soc_fpga_ilc_data *ilc_data = ilc_dev->data;
 	const struct intel_soc_fpga_ilc_config *ilc_config = ilc_dev->config;
-	uintptr_t ilc_base_address = DEVICE_MMIO_GET(ilc_dev);
+	uintptr_t ilc_base_address = ilc_data->ilc_base_address;
 
-	ilc_data->ilc_base_address = ilc_base_address;
 	if (ilc_data->enabled) {
 		for (int index = 0; index < ilc_data->port_count; index++) {
 			ret = shared_irq_disable(ilc_config->shared_irq[index], ilc_dev);
@@ -297,6 +296,7 @@ int ilc_intel_soc_fpga_init(const struct device *ilc_dev)
 {
 	DEVICE_MMIO_MAP(ilc_dev, K_MEM_CACHE_NONE);
 	struct intel_soc_fpga_ilc_data *ilc_data = ilc_dev->data;
+	ilc_data->ilc_base_address = DEVICE_MMIO_GET(ilc_dev);
 
 	/* Default disable ilc api functionally */
 	ilc_data->enabled = false;
