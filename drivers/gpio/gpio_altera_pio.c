@@ -10,26 +10,34 @@
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/gpio/gpio_utils.h>
+#include <zephyr/shared_irq.h>
 
-#define ALTERA_AVALON_PIO_DATA_OFFSET		0x00
-#define ALTERA_AVALON_PIO_DIRECTION_OFFSET	0x04
-#define ALTERA_AVALON_PIO_IRQ_OFFSET		0x08
-#define ALTERA_AVALON_PIO_SET_BITS		0x10
-#define ALTERA_AVALON_PIO_CLEAR_BITS		0x14
+#define ILC_SHARED_IRQ_INIT(node_id)                                                               \
+	DEVICE_DT_GET(DT_PHANDLE_BY_IDX(DT_DRV_INST(node_id), shared_irqs, 0))
 
-typedef void (*altera_cfg_func_t)(void);
+#define ALTERA_AVALON_PIO_DATA_OFFSET      0x00
+#define ALTERA_AVALON_PIO_DIRECTION_OFFSET 0x04
+#define ALTERA_AVALON_PIO_IRQ_OFFSET       0x08
+#define ALTERA_AVALON_PIO_SET_BITS         0x10
+#define ALTERA_AVALON_PIO_CLEAR_BITS       0x14
+
+typedef int (*altera_cfg_func_t)(void);
+typedef void (*altera_irq_func_t)(uint32_t irq_num);
 
 struct gpio_altera_config {
-	struct gpio_driver_config	common;
-	uintptr_t			reg_base;
-	uint32_t			irq_num;
-	uint8_t				direction;
-	uint8_t				outset;
-	uint8_t				outclear;
-	altera_cfg_func_t		cfg_func;
+	DEVICE_MMIO_ROM;
+	struct gpio_driver_config common;
+	uint32_t irq_num;
+	uint8_t direction;
+	uint8_t outset;
+	uint8_t outclear;
+	altera_cfg_func_t cfg_func;
+	altera_irq_func_t pio_irq_enable;
+	altera_irq_func_t pio_irq_disable;
 };
 
 struct gpio_altera_data {
+	DEVICE_MMIO_RAM;
 	/* gpio_driver_data needs to be first */
 	struct gpio_driver_data common;
 	/* list of callbacks */
@@ -39,9 +47,9 @@ struct gpio_altera_data {
 
 static bool gpio_pin_direction(const struct device *dev, uint32_t pin_mask)
 {
-	const struct gpio_altera_config *cfg = dev->config;
+	const struct gpio_altera_config *cfg = (struct gpio_altera_config *)dev->config;
 	const int direction = cfg->direction;
-	uintptr_t reg_base = cfg->reg_base;
+	uintptr_t reg_base = DEVICE_MMIO_GET(dev);
 	uint32_t addr;
 	uint32_t pin_direction;
 
@@ -65,14 +73,13 @@ static bool gpio_pin_direction(const struct device *dev, uint32_t pin_mask)
 	return true;
 }
 
-static int gpio_altera_configure(const struct device *dev,
-				 gpio_pin_t pin, gpio_flags_t flags)
+static int gpio_altera_configure(const struct device *dev, gpio_pin_t pin, gpio_flags_t flags)
 {
-	const struct gpio_altera_config *cfg = dev->config;
-	struct gpio_altera_data * const data = dev->data;
+	const struct gpio_altera_config *cfg = (struct gpio_altera_config *)dev->config;
+	struct gpio_altera_data *const data = (struct gpio_altera_data *)dev->data;
 	const int port_pin_mask = cfg->common.port_pin_mask;
 	const int direction = cfg->direction;
-	uintptr_t reg_base = cfg->reg_base;
+	uintptr_t reg_base = DEVICE_MMIO_GET(dev);
 	k_spinlock_key_t key;
 	uint32_t addr;
 
@@ -105,8 +112,7 @@ static int gpio_altera_configure(const struct device *dev,
 
 static int gpio_altera_port_get_raw(const struct device *dev, uint32_t *value)
 {
-	const struct gpio_altera_config *cfg = dev->config;
-	uintptr_t reg_base = cfg->reg_base;
+	uintptr_t reg_base = DEVICE_MMIO_GET(dev);
 	uint32_t addr;
 
 	addr = reg_base + ALTERA_AVALON_PIO_DATA_OFFSET;
@@ -122,11 +128,11 @@ static int gpio_altera_port_get_raw(const struct device *dev, uint32_t *value)
 
 static int gpio_altera_port_set_bits_raw(const struct device *dev, gpio_port_pins_t mask)
 {
-	const struct gpio_altera_config *cfg = dev->config;
-	struct gpio_altera_data * const data = dev->data;
+	const struct gpio_altera_config *cfg = (struct gpio_altera_config *)dev->config;
+	struct gpio_altera_data *const data = (struct gpio_altera_data *)dev->data;
 	const uint8_t outset = cfg->outset;
 	const int port_pin_mask = cfg->common.port_pin_mask;
-	uintptr_t reg_base = cfg->reg_base;
+	uintptr_t reg_base = DEVICE_MMIO_GET(dev);
 	uint32_t addr;
 	k_spinlock_key_t key;
 
@@ -155,11 +161,11 @@ static int gpio_altera_port_set_bits_raw(const struct device *dev, gpio_port_pin
 
 static int gpio_altera_port_clear_bits_raw(const struct device *dev, gpio_port_pins_t mask)
 {
-	const struct gpio_altera_config *cfg = dev->config;
-	struct gpio_altera_data * const data = dev->data;
+	const struct gpio_altera_config *cfg = (struct gpio_altera_config *)dev->config;
+	struct gpio_altera_data *const data = (struct gpio_altera_data *)dev->data;
 	const uint8_t outclear = cfg->outclear;
 	const int port_pin_mask = cfg->common.port_pin_mask;
-	uintptr_t reg_base = cfg->reg_base;
+	uintptr_t reg_base = DEVICE_MMIO_GET(dev);
 	uint32_t addr;
 	k_spinlock_key_t key;
 
@@ -189,24 +195,26 @@ static int gpio_altera_port_clear_bits_raw(const struct device *dev, gpio_port_p
 
 static int gpio_init(const struct device *dev)
 {
-	const struct gpio_altera_config *cfg = dev->config;
+	int ret;
+
+	DEVICE_MMIO_MAP(dev, K_MEM_CACHE_NONE);
+
+	const struct gpio_altera_config *cfg = (struct gpio_altera_config *)dev->config;
 
 	/* Configure GPIO device */
-	cfg->cfg_func();
+	ret = cfg->cfg_func();
 
-	return 0;
+	return ret;
 }
 
-static int gpio_altera_pin_interrupt_configure(const struct device *dev,
-						gpio_pin_t pin,
-						enum gpio_int_mode mode,
-						enum gpio_int_trig trig)
+static int gpio_altera_pin_interrupt_configure(const struct device *dev, gpio_pin_t pin,
+					       enum gpio_int_mode mode, enum gpio_int_trig trig)
 {
 	ARG_UNUSED(trig);
 
-	const struct gpio_altera_config *cfg = dev->config;
-	struct gpio_altera_data * const data = dev->data;
-	uintptr_t reg_base = cfg->reg_base;
+	const struct gpio_altera_config *cfg = (struct gpio_altera_config *)dev->config;
+	struct gpio_altera_data *const data = (struct gpio_altera_data *)dev->data;
+	uintptr_t reg_base = DEVICE_MMIO_GET(dev);
 	const int port_pin_mask = cfg->common.port_pin_mask;
 	uint32_t addr;
 	k_spinlock_key_t key;
@@ -228,13 +236,13 @@ static int gpio_altera_pin_interrupt_configure(const struct device *dev,
 	case GPIO_INT_MODE_DISABLED:
 		/* Disable interrupt of pin */
 		sys_clear_bits(addr, BIT(pin));
-		irq_disable(cfg->irq_num);
+		cfg->pio_irq_disable(cfg->irq_num);
 		break;
 	case GPIO_INT_MODE_LEVEL:
 	case GPIO_INT_MODE_EDGE:
 		/* Enable interrupt of pin */
 		sys_set_bits(addr, BIT(pin));
-		irq_enable(cfg->irq_num);
+		cfg->pio_irq_enable(cfg->irq_num);
 		break;
 	default:
 		return -EINVAL;
@@ -245,21 +253,19 @@ static int gpio_altera_pin_interrupt_configure(const struct device *dev,
 	return 0;
 }
 
-static int gpio_altera_manage_callback(const struct device *dev,
-					struct gpio_callback *callback,
-					bool set)
+static int gpio_altera_manage_callback(const struct device *dev, struct gpio_callback *callback,
+				       bool set)
 {
 
-	struct gpio_altera_data * const data = dev->data;
+	struct gpio_altera_data *const data = (struct gpio_altera_data *)dev->data;
 
 	return gpio_manage_callback(&data->cb, callback, set);
 }
 
 static void gpio_altera_irq_handler(const struct device *dev)
 {
-	const struct gpio_altera_config *cfg = dev->config;
-	struct gpio_altera_data *data = dev->data;
-	uintptr_t reg_base = cfg->reg_base;
+	struct gpio_altera_data *data = (struct gpio_altera_data *)dev->data;
+	uintptr_t reg_base = DEVICE_MMIO_GET(dev);
 	uint32_t port_value;
 	uint32_t addr;
 	k_spinlock_key_t key;
@@ -279,50 +285,82 @@ static void gpio_altera_irq_handler(const struct device *dev)
 }
 
 static const struct gpio_driver_api gpio_altera_driver_api = {
-	.pin_configure		 = gpio_altera_configure,
-	.port_get_raw		 = gpio_altera_port_get_raw,
-	.port_set_masked_raw	 = NULL,
-	.port_set_bits_raw	 = gpio_altera_port_set_bits_raw,
-	.port_clear_bits_raw	 = gpio_altera_port_clear_bits_raw,
-	.port_toggle_bits	 = NULL,
+	.pin_configure = gpio_altera_configure,
+	.port_get_raw = gpio_altera_port_get_raw,
+	.port_set_masked_raw = NULL,
+	.port_set_bits_raw = gpio_altera_port_set_bits_raw,
+	.port_clear_bits_raw = gpio_altera_port_clear_bits_raw,
+	.port_toggle_bits = NULL,
 	.pin_interrupt_configure = gpio_altera_pin_interrupt_configure,
-	.manage_callback	 = gpio_altera_manage_callback
-};
+	.manage_callback = gpio_altera_manage_callback};
 
-#define GPIO_CFG_IRQ(idx, n)							\
-		IRQ_CONNECT(DT_INST_IRQ_BY_IDX(n, idx, irq),			\
-			    COND_CODE_1(DT_INST_IRQ_HAS_CELL(n, priority), \
-				DT_INST_IRQ(n, priority), (0)), gpio_altera_irq_handler,	\
-			    DEVICE_DT_INST_GET(n), 0);				\
+#define GPIO_CFG_IRQ(idx, n)                                                                       \
+	IRQ_CONNECT(                                                                               \
+		DT_INST_IRQ_BY_IDX(n, idx, irq),                                                   \
+		COND_CODE_1(DT_INST_IRQ_HAS_CELL(n, priority), (DT_INST_IRQ(n, priority)), (0)),   \
+		gpio_altera_irq_handler, DEVICE_DT_INST_GET(n), 0);
 
-#define CREATE_GPIO_DEVICE(n)						\
-	static void gpio_altera_cfg_func_##n(void);			\
-	static struct gpio_altera_data gpio_altera_data_##n;		\
-	static struct gpio_altera_config gpio_config_##n = {		\
-		.common		= {					\
-		.port_pin_mask	=					\
-				  GPIO_PORT_PIN_MASK_FROM_DT_INST(n),	\
-		},						        \
-		.reg_base	= DT_INST_REG_ADDR(n),			\
-		.direction	= DT_INST_ENUM_IDX(n, direction),	\
-		.irq_num	= COND_CODE_1(DT_INST_IRQ_HAS_IDX(n, 0), (DT_INST_IRQN(n)), (0)),\
-		.cfg_func	= gpio_altera_cfg_func_##n,		\
-		.outset		= DT_INST_PROP(n, outset),	\
-		.outclear	= DT_INST_PROP(n, outclear),	\
-	};								\
-							\
-	DEVICE_DT_INST_DEFINE(n,			\
-			      gpio_init,		\
-			      NULL,			\
-			      &gpio_altera_data_##n,	\
-			      &gpio_config_##n,		\
-			      POST_KERNEL,		\
-			      CONFIG_GPIO_INIT_PRIORITY,	\
-			      &gpio_altera_driver_api);		        \
-									\
-	static void gpio_altera_cfg_func_##n(void)			\
-	{								\
-		LISTIFY(DT_NUM_IRQS(DT_DRV_INST(n)), GPIO_CFG_IRQ, (), n)\
-	}
+#define CREATE_GPIO_DEVICE(n)                                                                      \
+	static int gpio_altera_cfg_func_##n(void);                                                 \
+	static void pio_irq_enable_handler_##n(uint32_t irq_num);                                  \
+	static void pio_irq_disable_handler_##n(uint32_t irq_num);                                 \
+	COND_CODE_1(DT_INST_NODE_HAS_PROP(n, shared_irqs),                                         \
+		    (static int gpio_altera_irq_handler_##n(const struct device *dev,              \
+							    unsigned int irq_number);),            \
+		    ())                                                                            \
+	static struct gpio_altera_data gpio_altera_data_##n;                                       \
+	const static struct gpio_altera_config gpio_config_##n = {                                 \
+		DEVICE_MMIO_ROM_INIT(DT_DRV_INST(n)),                                              \
+		.common =                                                                          \
+			{                                                                          \
+				.port_pin_mask = GPIO_PORT_PIN_MASK_FROM_DT_INST(n),               \
+			},                                                                         \
+		.direction = DT_INST_ENUM_IDX(n, direction),                                       \
+		.irq_num = COND_CODE_1(DT_INST_IRQ_HAS_IDX(n, 0), (DT_INST_IRQN(n)), (0)),         \
+		.cfg_func = gpio_altera_cfg_func_##n,                                              \
+		.outset = DT_INST_PROP(n, outset),                                                 \
+		.outclear = DT_INST_PROP(n, outclear),                                             \
+		.pio_irq_enable = pio_irq_enable_handler_##n,                                      \
+		.pio_irq_disable = pio_irq_disable_handler_##n,                                    \
+	};                                                                                         \
+												   \
+	DEVICE_DT_INST_DEFINE(n, gpio_init, NULL, &gpio_altera_data_##n, &gpio_config_##n,         \
+			      POST_KERNEL, CONFIG_GPIO_INIT_PRIORITY, &gpio_altera_driver_api);    \
+												   \
+	static int gpio_altera_cfg_func_##n(void)                                                  \
+	{                                                                                          \
+		COND_CODE_1(DT_INST_NODE_HAS_PROP(n, shared_irqs),                                 \
+			    (                                                                      \
+				int ret;                                                           \
+				ret = shared_irq_isr_register(ILC_SHARED_IRQ_INIT(n),              \
+								  &gpio_altera_irq_handler_##n,    \
+								  DEVICE_DT_INST_GET(n));          \
+				if (ret != 0) {							   \
+					return ret;						   \
+					}),							   \
+			    (LISTIFY(DT_NUM_IRQS(DT_DRV_INST(n)), GPIO_CFG_IRQ, (), n)))           \
+		return 0;                                                                          \
+	}                                                                                          \
+												   \
+	static void pio_irq_enable_handler_##n(uint32_t irq_num)                                   \
+	{                                                                                          \
+		COND_CODE_1(DT_INST_NODE_HAS_PROP(n, shared_irqs), (                               \
+		shared_irq_enable(ILC_SHARED_IRQ_INIT(n), DEVICE_DT_INST_GET(n));),		   \
+		(irq_enable(irq_num);))								   \
+	}                                                                                          \
+												   \
+	static void pio_irq_disable_handler_##n(uint32_t irq_num)                                  \
+	{                                                                                          \
+		COND_CODE_1(DT_INST_NODE_HAS_PROP(n, shared_irqs), (				   \
+		shared_irq_disable(ILC_SHARED_IRQ_INIT(n), DEVICE_DT_INST_GET(n));),               \
+		(irq_disable(irq_num);))						           \
+	}                                                                                          \
+	COND_CODE_1(DT_INST_NODE_HAS_PROP(n, shared_irqs),                                         \
+		    (static int gpio_altera_irq_handler_##n(const struct device *dev,              \
+							    unsigned int irq_number) {             \
+			gpio_altera_irq_handler(dev);                                              \
+			return 0;                                                                  \
+		    }),                                                                            \
+		    ())
 
 DT_INST_FOREACH_STATUS_OKAY(CREATE_GPIO_DEVICE)
