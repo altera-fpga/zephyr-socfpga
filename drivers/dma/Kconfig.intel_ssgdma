@@ -1,0 +1,75 @@
+# Copyright (c) 2024 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig DMA_INTEL_SSGDMA
+	bool "Intel Scalable Scatter-Gather DMA driver"
+	default y
+	depends on DT_HAS_INTEL_SSGDMA_ENABLED
+	imply DMA_64BIT
+	help
+	  Enable the Intel Scalable Scatter-Gather DMA driver driver.
+
+if DMA_INTEL_SSGDMA
+	config DMA_INTEL_SSGDMA_TIMEOUT_INTERVAL
+		int "timeout interval value in us."
+		default 10
+		help
+		  Determines how often a timeout should be checked by the driver.
+
+	config DMA_INTEL_SSGDMA_PAUSE_TIMEOUT
+		int "pause timeout value in us."
+		default 1000
+		help
+		  When dma_stop of dma_suspend is called, the driver will set csr to pause
+		  the channel. The driver will block until the channel is paused or
+		  until this timeout is reached.
+
+	config DMA_INTEL_SSGDMA_RESET_TIMEOUT
+		int "reset timeout value in us."
+		default 1000
+		help
+		  When dma_stop of dma_stop is called, the driver will set csr to reset
+		  the channel. The driver will block until the channel is reset or
+		  until this timeout is reached.
+
+	config DMA_INTEL_SSGDMA_HOST_INTERFACE_CONTROL
+		int "value of host interface control."
+		default 0
+		help
+		  Value of host interface control.
+		  Please refer to AMBA AXI and ACE Protocol Specification for details.
+
+	config DMA_INTEL_SSGDMA_DEVICE_INTERFACE_CONTROL
+		int "value of device interface control."
+		default 0
+		help
+		  Value of device interface control.
+		  Please refer to AMBA AXI and ACE Protocol Specification for details.
+
+	config DMA_INTEL_SSGDMA_SIDEBAND_SIGNAL
+		int "value of user defined sideband signal."
+		default 0
+		help
+		  Value of user defined sideband signal for  host to device streaming transfer.
+
+	config DMA_INTEL_SSGDMA_Q_SIZE
+		int "value of descriptor block entries."
+		default 1
+		help
+		  The number of descriptor block entries allocated by software during the
+		  initialization flow. A value of 1 indicates one descriptor block with 4k
+		  in size(up to 128 descriptors) is allocated in the system memory.
+		  Valid range: [1 128]
+
+	config DMA_INTEL_SSGDMA_Q_RESP_SIZE
+		int "value of responder block entries."
+		default 1
+		help
+		  The actual number of responder block entries that will be configure by software
+		  in the responder table. A value of 1 indicates one responder block with 4k
+		  in size(up to responders) is allocated in the system memory.
+		  This is set to 0 by default, as there are no suitable api in zephyr for user
+		  to evaluate the responders. If set to none zero, the driver will process the
+		  responder and indicate the responder error through status of dma_callback_t.
+		  Valid range: [0 128]
+endif # DMA_INTEL_SSGDMA

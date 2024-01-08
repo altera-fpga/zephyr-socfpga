@@ -1,0 +1,50 @@
+# Copyright (c) 2023 Intel Corporation. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+description: Intel SSGDMA (Scalable Scatter-Gather DMA)
+
+compatible: "intel,ssgdma"
+
+include: dma-controller.yaml
+
+properties:
+  reg:
+    required: true
+    description: |
+      Base register space for the ssgdma controller.
+
+  d2h-st-port-numbers:
+    required: true
+    type: int
+    description: |
+      Number of D2H-ST ports.
+      This must be the same as the design in platform designer.
+
+  h2d-st-port-numbers:
+    required: true
+    type: int
+    description: |
+      Number of H2D-ST ports.
+      This must be the same as the design in platform designer.
+
+  h2d-mm-port-numbers:
+    required: true
+    type: int
+    description: |
+      Number of H2D-MM ports.
+      This must be the same as the design in platform designer.
+
+  unaligned-access:
+    type: boolean
+    description: |
+      If true, then SSGDMA IP Hardware allows unaligned access.
+      For aligned access, all descriptors and data buffers must have
+      address that is aligned to 32-bytes.
+      The minimum transfer length per descriptor is 4-bytes.
+      This must be the same as the design in platform designer.
+
+  "#dma-cells":
+    const: 1
+
+dma-cells:
+  - channel-id
