@@ -622,7 +622,7 @@ static void reconfig_start(void *p1, void *p2, void *p3)
 	uint64_t function_identifier = 0;
 	uint32_t cmd_id = 0;
 	uint32_t retry_count = 0;
-	struct fm_config_info *config_info = (struct fm_config_info *)p3;
+	struct fm_config_info *config_info_ptr = (struct fm_config_info *)p3;
 	struct fm_private_data private_data;
 
 	private_data.private_data_lock =
@@ -633,10 +633,10 @@ static void reconfig_start(void *p1, void *p2, void *p3)
 		return;
 	}
 
-	private_data.config_type = config_info->config_type;
+	private_data.config_type = config_info_ptr->config_type;
 	k_sem_init(&(private_data.private_data_lock->reconfig_data_sem), 0, 1);
 
-	if (config_info->config_type == FPGA_FULL_CONFIGURATION) {
+	if (config_info_ptr->config_type == FPGA_FULL_CONFIGURATION) {
 		curr_stage = FPGA_BRIDGE_DISABLE;
 	} else {
 		curr_stage = FPGA_CONFIG_INIT;
@@ -665,7 +665,7 @@ static void reconfig_start(void *p1, void *p2, void *p3)
 			ret = svc_client_open();
 			if (!ret) {
 				LOG_DBG("Client init Success !!");
-				if (config_info->config_type == FPGA_FULL_CONFIGURATION) {
+				if (config_info_ptr->config_type == FPGA_FULL_CONFIGURATION) {
 					curr_stage = FPGA_CANCEL_STAGE;
 				} else {
 					curr_stage = FPGA_FREEZE_REGION;
@@ -681,7 +681,7 @@ static void reconfig_start(void *p1, void *p2, void *p3)
 		case FPGA_FREEZE_REGION:
 			/* Will freeze the fpga region */
 			LOG_DBG("Sending FPGA freeze region command");
-			if (fpga_freeze_region(config_info->dev)) {
+			if (fpga_freeze_region(config_info_ptr->dev)) {
 				curr_stage = FPGA_RECONFIG_EXIT;
 			} else {
 				curr_stage = FPGA_CANCEL_STAGE;
@@ -753,7 +753,7 @@ static void reconfig_start(void *p1, void *p2, void *p3)
 		case FPGA_UNFREEZE_REGION:
 			/* Will unfreeze the fpga region */
 			LOG_DBG("Sending FPGA unfreeze region command");
-			if (fpga_unfreeze_region(config_info->dev)) {
+			if (fpga_unfreeze_region(config_info_ptr->dev)) {
 				LOG_ERR("Failed to unfreeze the region");
 			}
 			curr_stage = FPGA_RECONFIG_EXIT;
@@ -810,14 +810,15 @@ static int32_t fpga_reconfig_status_validate(struct fpga_config_status *reconfig
 }
 
 /* Create and start the reconfiguration thread */
-uint32_t config_thread_start(char *image_ptr, uint32_t img_size, struct fm_config_info *config_info)
+uint32_t config_thread_start(char *image_ptr, uint32_t img_size,
+				struct fm_config_info *config_info_ptr)
 {
 	/* Will start Reconfig state from here only */
-	k_tid_t config_tid =
-		k_thread_create(&config_thread_data, reconfig_thread_stack_area,
-				K_KERNEL_STACK_SIZEOF(reconfig_thread_stack_area), reconfig_start,
-				(void *)image_ptr, UINT_TO_POINTER(img_size), (void *)config_info,
-				FPGA_MANAGER_THREAD_PRIORITY, 0, K_NO_WAIT);
+	k_tid_t config_tid = k_thread_create(&config_thread_data, reconfig_thread_stack_area,
+						K_KERNEL_STACK_SIZEOF(reconfig_thread_stack_area),
+						reconfig_start, (void *)image_ptr,
+						UINT_TO_POINTER(img_size), (void *)config_info_ptr,
+						FPGA_MANAGER_THREAD_PRIORITY, 0, K_NO_WAIT);
 
 	if (!config_tid) {
 		LOG_ERR("Failed to Create Thread !!");
