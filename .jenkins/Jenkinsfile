@@ -231,7 +231,7 @@ pipeline {
                             sh """#!/bin/bash -x
                             cd $WORKSPACE
                             chmod 755 .jenkins/buildScript_agilex.sh
-                            .jenkins/buildScript_agilex.sh ${buildNumber} ${targetBranch}
+                            .jenkins/buildScript_agilex.sh ${buildNumber} ${branchName}
                             """
                         }
                         catch (Exception e) {
@@ -243,7 +243,7 @@ pipeline {
                             sh """#!/bin/bash -x
                             cd $WORKSPACE
                             chmod 755 .jenkins/buildScript_niosv-m.sh
-                            .jenkins/buildScript_niosv-m.sh ${buildNumber} ${targetBranch}
+                            .jenkins/buildScript_niosv-m.sh ${buildNumber} ${branchName}
                              """
                         }
                         catch (Exception e) {
@@ -255,7 +255,7 @@ pipeline {
                             sh """#!/bin/bash -x
                             cd $WORKSPACE
                             chmod 755 .jenkins/buildScript_agilex5.sh
-                            .jenkins/buildScript_agilex5.sh ${buildNumber} ${targetBranch}
+                            .jenkins/buildScript_agilex5.sh ${buildNumber} ${branchName}
                             """
                         }
                         catch (Exception e) {
