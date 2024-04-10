@@ -7,6 +7,7 @@
 #include <zephyr/device.h>
 #include <zephyr/drivers/dma.h>
 #include <zephyr/sys/printk.h>
+#include <zephyr/cache.h>
 #include <string.h>
 
 #if defined(CONFIG_DMA_DW_AXI)
@@ -47,8 +48,8 @@ volatile int xfer_status;
 static struct k_sem dma_complete;
 
 /* transfer and receive buffers */
-static uint8_t tx_data[XFERS][XFER_SIZE];
-static uint8_t rx_data[XFERS][XFER_SIZE];
+static uint8_t tx_data[XFERS][XFER_SIZE] __nocache;
+static uint8_t rx_data[XFERS][XFER_SIZE] __nocache;
 
 static void dma_callback(const struct device *dev, void *user_data, uint32_t channel, int status)
 {
@@ -129,6 +130,11 @@ int main(void)
 		return ret;
 	}
 
+#if !defined(CONFIG_NOCACHE_MEMORY) && !defined(CONFIG_CCU_SUPPORT)
+	/* flush cached data*/
+	sys_cache_data_flush_range((void *)tx_data, XFERS * XFER_SIZE);
+#endif
+
 	/* start dma transfer */
 	ret = dma_start(dma_dev, DMA_CHANNEL);
 	if (ret != 0) {
@@ -143,6 +149,11 @@ int main(void)
 		printk("dma transfer encountered error status:%d\n", xfer_status);
 		return xfer_status;
 	}
+
+#if !defined(CONFIG_NOCACHE_MEMORY) && !defined(CONFIG_CCU_SUPPORT)
+	sys_cache_data_invd_range((void *)rx_data, XFERS * XFER_SIZE);
+#endif
+
 
 	/* compare tx and rx buffer to check if the memory contents are same */
 	if (!memcmp((void *)tx_data, (void *)rx_data, (XFERS * XFER_SIZE))) {
