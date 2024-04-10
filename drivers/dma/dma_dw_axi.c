@@ -11,6 +11,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/reset.h>
 #include <zephyr/sys/atomic.h>
+#include <zephyr/cache.h>
 
 /* check if reset property is defined */
 #define DMA_DW_AXI_RESET_SUPPORTED        DT_ANY_INST_HAS_PROP_STATUS_OKAY(resets)
@@ -125,7 +126,6 @@ LOG_MODULE_REGISTER(dma_designware_axi, CONFIG_DMA_LOG_LEVEL);
 #define DMA_DW_AXI_CTL_AWLEN_EN                  BIT64(47)
 /* destination burst length(considered when corresponding enable bit is set) */
 #define DMA_DW_AXI_CTL_AWLEN(x)                  FIELD_PREP(GENMASK64(55, 48), x)
-
 /* source burst transaction length */
 #define DMA_DW_AXI_CTL_SRC_MSIZE(x)              FIELD_PREP(GENMASK64(17, 14), x)
 /* destination burst transaction length */
@@ -674,6 +674,12 @@ static int dma_dw_axi_config(const struct device *dev, uint32_t channel,
 		blk_cfg = blk_cfg->next_block;
 	}
 
+#if !defined(CONFIG_NOCACHE_MEMORY) && !defined(CONFIG_CCU_SUPPORT)
+	sys_cache_data_flush_range((void *)chan_data->lli_desc_base,
+			sizeof(struct dma_lli) * cfg->block_count);
+#endif
+
+
 	chan_data->lli_desc_current = chan_data->lli_desc_base;
 
 	/* enable an interrupt depending on whether the callback is requested after dma transfer
@@ -973,7 +979,7 @@ static const struct dma_driver_api dma_dw_axi_driver_api = {
 		(static struct dma_work work_##inst[DT_INST_PROP(inst, dma_channels)];)) \
 	static struct dma_lli \
 		dma_desc_pool_##inst[DT_INST_PROP(inst, dma_channels) * \
-			CONFIG_DMA_DW_AXI_MAX_DESC]; \
+			CONFIG_DMA_DW_AXI_MAX_DESC] __nocache; \
 	static struct dma_dw_axi_dev_data dma_dw_axi_data_##inst = { \
 		.chan = chan_##inst, \
 		IF_ENABLED(CONFIG_DMA_BOTTOM_HALF_WORK_QUEUE, \
