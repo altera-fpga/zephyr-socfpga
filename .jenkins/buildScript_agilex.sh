@@ -43,6 +43,8 @@ west build -b $BOARD $EXAMPLE
 # Pass The $ZEPHYR_OUTPUT_DIR to the next Job
 cd $ZEPHYR_OUTPUT_DIR/..
 tar cf zephyr.tar zephyr
-ssh ppglswbld001.png.intel.com -- mkdir -p /nfs/site/disks/swbld_regofficiala_pg12/users/sys_gsrd/zephyr-ci/$BRANCH_NAME/$JENKINS_JOB
-scp -r zephyr.tar  ppglswbld001.png.intel.com:/nfs/site/disks/swbld_regofficiala_pg12/users/sys_gsrd/zephyr-ci/$BRANCH_NAME/$JENKINS_JOB
-ssh ppglswbld001.png.intel.com -- "cd /nfs/site/disks/swbld_regofficiala_pg12/users/sys_gsrd/zephyr-ci/$BRANCH_NAME/$JENKINS_JOB && tar xf zephyr.tar && rm -rf zephyr.tar"
+zephyrci="/nfs/site/disks/swbld_regofficiala_pg12/users/sys_gsrd/zephyr-ci"
+rmt_dir="$zephyrci/$BRANCH_NAME/$JENKINS_JOB"
+ssh pglcaas14.png.intel.com -- mkdir -p $rmt_dir
+scp -r zephyr.tar  pglcaas14.png.intel.com:$rmt_dir
+ssh pglcaas14.png.intel.com -- "cd $rmt_dir && tar xf zephyr.tar && rm -rf zephyr.tar"

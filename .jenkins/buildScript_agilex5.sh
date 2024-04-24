@@ -46,7 +46,8 @@ cp zephyr_build/zephyr/zephyr.bin zephyr_build/zephyr/zephyr.elf zephyr/cli
 tar cf zephyr.tar zephyr
 
 #add ssh and pass this tar files
-rmt_dir="/nfs/site/disks/swbld_regofficiala_pg12/users/sys_gsrd/zephyr-ci/$BRANCH_NAME/$JENKINS_JOB"
-ssh ppglswbld001.png.intel.com -- mkdir -p $rmt_dir
-scp -r zephyr.tar  ppglswbld001.png.intel.com:$rmt_dir
-ssh ppglswbld001.png.intel.com -- "cd $rmt_dir && tar xf zephyr.tar && rm -rf zephyr.tar"
+zephyrci="/nfs/site/disks/swbld_regofficiala_pg12/users/sys_gsrd/zephyr-ci"
+rmt_dir="$zephyrci/$BRANCH_NAME/$JENKINS_JOB"
+ssh pglcaas14.png.intel.com -- mkdir -p $rmt_dir
+scp -r zephyr.tar  pglcaas14.png.intel.com:$rmt_dir
+ssh pglcaas14.png.intel.com -- "cd $rmt_dir && tar xf zephyr.tar && rm -rf zephyr.tar"
