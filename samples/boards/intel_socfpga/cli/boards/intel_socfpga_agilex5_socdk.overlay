@@ -28,26 +28,6 @@
 	status = "okay";
 };
 
-&i2c0 {
-	status = "okay";
-};
-
-&i2c1 {
-	status = "okay";
-};
-
-&i2c2 {
-	status = "okay";
-};
-
-&i2c3 {
-	status = "okay";
-};
-
-&i2c4 {
-	status = "okay";
-};
-
 &dma0 {
 	status = "okay";
 };
@@ -59,20 +39,4 @@
 &sip_smc {
 	status = "okay";
 	zephyr,num-clients = <5>;
-};
-
-&io96b0 {
-	status = "okay";
-};
-
-&io96b1 {
-	status = "okay";
-};
-
-&freeze_controller0 {
-	status = "okay";
-};
-
-&smmu {
-	status = "okay";
 };
