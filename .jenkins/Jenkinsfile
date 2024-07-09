@@ -227,29 +227,6 @@ pipeline {
                             error 'unbuildable commits'
                             exit -1
                         }
-                        try {
-                            sh """#!/bin/bash -x
-                            cd $WORKSPACE
-                            chmod 755 .jenkins/buildScript_agilex.sh
-                            .jenkins/buildScript_agilex.sh ${buildNumber} ${branchName}
-                            """
-                        }
-                        catch (Exception e) {
-                            error 'Failed to build Agilex'
-                            exit -1
-                        }
-
-                        try {
-                            sh """#!/bin/bash -x
-                            cd $WORKSPACE
-                            chmod 755 .jenkins/buildScript_niosv-m.sh
-                            .jenkins/buildScript_niosv-m.sh ${buildNumber} ${branchName}
-                             """
-                        }
-                        catch (Exception e) {
-                            error 'Failed to build NIOS-V'
-                            exit -1
-                        }
 
                         try {
                             sh """#!/bin/bash -x
@@ -269,8 +246,6 @@ pipeline {
 	stage("Regtest"){
             steps {
                 script {
-                    build job: "Embedded_CI/zephyr-regtest",  parameters: [string(name: 'JOB_NO_BUILD', value: String.valueOf(BUILD_NUMBER)), string(name: 'GIT_BRANCH_NAME', value: env.BRANCH_NAME)], wait: true
-                    build job: "Embedded_CI/zephyr-regtest-sc",  parameters: [string(name: 'JOB_NO_BUILD', value: String.valueOf(BUILD_NUMBER)), string(name: 'GIT_BRANCH_NAME', value: env.BRANCH_NAME)], wait: true
                     build job: "Embedded_CI/zephyr-agilex5-regtest",  parameters: [string(name: 'JOB_NO_BUILD', value: String.valueOf(BUILD_NUMBER)), string(name: 'GIT_BRANCH_NAME', value: env.BRANCH_NAME)], wait: true
                 }
             }
