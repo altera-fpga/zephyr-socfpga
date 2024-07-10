@@ -40,3 +40,11 @@
 	status = "okay";
 	zephyr,num-clients = <5>;
 };
+
+&gpio0 {
+	status = "okay";
+};
+
+&gpio1 {
+	status = "okay";
+};
