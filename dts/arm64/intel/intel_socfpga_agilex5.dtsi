@@ -88,12 +88,6 @@
 		method = "smc";
 	};
 
-	/* This is for setting the MMU region for pinmux */
-	pinmux: pinmux@10d13000 {
-		compatible = "syscon";
-		reg = <0x10d13000 0x1000>;
-	};
-
 	mem0: memory@80100000 {
 		device_type = "memory";
 		reg = <0x80100000 DT_SIZE_M(8)>;

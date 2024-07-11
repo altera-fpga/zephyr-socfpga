@@ -59,82 +59,6 @@ struct gpio_intel_socfpga_data {
 	DEVICE_MMIO_NAMED_RAM(gpio_mmio);
 };
 
-/**
- * @brief provides funtionality to validate pin/pinmask before gpio operation
- *
- * @param cfg GPIO port instance configuration.
- * @param pin_mask GPIO pin number/numbers.
- *
- * @retval true on success.
- * @retval false if pin/pinmask is not valid.
- */
-static bool gpio_socfpga_is_pinmask_valid(
-		const struct gpio_intel_socfpga_config *cfg,
-		uint32_t pin_mask)
-{
-	const gpio_port_pins_t port_pin_mask = cfg->gpio_config.port_pin_mask;
-	const uint32_t gpio_port = cfg->gpio_port;
-	uint32_t ngpios = cfg->ngpios;
-
-	uint32_t pin;
-	uint32_t hps_io_pin;
-	uint32_t addroffst;
-	uint32_t pmux_value;
-
-	/* Pin range more than 32 will return 0x0 pin mask */
-	if (pin_mask == 0) {
-		LOG_DBG("Invalid pin_mask value passed: 0x%X", pin_mask);
-		return false;
-	}
-	/**
-	 * This loop will verify every bit set as a separate pin.
-	 * Each pin should be eligible for gpio operation in pin_mask
-	 */
-	while (pin_mask != 0) {
-		pin = find_lsb_set(pin_mask) - 1;
-
-		/* Check whether input pin is in range */
-		if ((BIT(pin) & port_pin_mask) == 0) {
-			LOG_DBG("Mask bit %d value is out of range: MASK:0x%X", pin, port_pin_mask);
-			return false;
-		}
-
-		/* Check for GPIO pinmux configuration value */
-		hps_io_pin = (gpio_port * ngpios) + pin;
-		addroffst = hps_io_pin * PMUX_SEL_OFFSET;
-
-		/**
-		 * The pinmux register has address jump in hardware
-		 * Address is not incremented from 0x9C to 0xA0. See below details.
-		 */
-		/**
-		 * pin 0 -  0x10D1 3000
-		 * pin 1 -  0x10D1 3004
-		 * ...
-		 * pin 39 - 0x10D1 309C
-		 * (Jump)
-		 * pin 40 - 0x10D1 3100
-		 * ...
-		 * Below GAP is added after pin 40.
-		 */
-		if (hps_io_pin >= PMUX_40_SEL) {
-			addroffst += PMUX_40_SEL_GAP;
-		}
-
-		/* Getting pinmux base address from pinmux node */
-		pmux_value = sys_read32((DT_REG_ADDR(DT_NODELABEL(pinmux)) + addroffst));
-
-		if (pmux_value != PMUX_GPIO_VAL) {
-			LOG_DBG("Invalid GPIO PIN : 0x%X", pmux_value);
-			return false;
-		}
-
-		pin_mask = pin_mask ^ BIT(pin);
-	}
-
-	return true;
-}
-
 static int gpio_socfpga_configure(const struct device *dev,
 			      gpio_pin_t pin, gpio_flags_t flags)
 {
@@ -142,11 +66,6 @@ static int gpio_socfpga_configure(const struct device *dev,
 	uintptr_t addr;
 
 	addr = reg_base + GPIO_SWPORTA_DDR_OFFSET;
-
-	if (!gpio_socfpga_is_pinmask_valid(DEV_CFG(dev), BIT(pin))) {
-		LOG_ERR("Use Valid pin for GPIO operation");
-		return -EINVAL;
-	}
 
 	/* As per the flag set doing pin configuration, following state is possible:
 	 * - Pin is input
@@ -188,11 +107,6 @@ static int gpio_socfpga_port_set_bits_raw(const struct device *dev, gpio_port_pi
 {
 	uintptr_t reg_base = DEVICE_MMIO_NAMED_GET(dev, gpio_mmio);
 
-	if (!gpio_socfpga_is_pinmask_valid(DEV_CFG(dev), mask)) {
-		LOG_ERR("Use Valid pin for GPIO operation");
-		return -EINVAL;
-	}
-
 	sys_set_bits(reg_base, mask);
 
 	return 0;
@@ -201,11 +115,6 @@ static int gpio_socfpga_port_set_bits_raw(const struct device *dev, gpio_port_pi
 static int gpio_socfpga_port_clear_bits_raw(const struct device *dev, gpio_port_pins_t mask)
 {
 	uintptr_t reg_base = DEVICE_MMIO_NAMED_GET(dev, gpio_mmio);
-
-	if (!gpio_socfpga_is_pinmask_valid(DEV_CFG(dev), mask)) {
-		LOG_ERR("Use Valid pin for GPIO operation");
-		return -EINVAL;
-	}
 
 	sys_clear_bits(reg_base, mask);
 
@@ -217,11 +126,6 @@ static int gpio_socfpga_port_toggle_bits(const struct device *dev, gpio_port_pin
 	uintptr_t reg_base = DEVICE_MMIO_NAMED_GET(dev, gpio_mmio);
 
 	uint32_t value;
-
-	if (!gpio_socfpga_is_pinmask_valid(DEV_CFG(dev), mask)) {
-		LOG_ERR("Use Valid pin for GPIO operation");
-		return -EINVAL;
-	}
 
 	value = sys_read32((reg_base));
 	value ^= mask;

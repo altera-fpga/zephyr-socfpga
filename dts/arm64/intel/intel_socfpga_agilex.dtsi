@@ -104,12 +104,6 @@
 		      <0xffd12000 0x1000>;
 	};
 
-	/* This is for setting the MMU region for pinmux */
-	pinmux: pinmux@ffd13000 {
-		compatible = "syscon";
-		reg = <0xffd13000 0x1000>;
-	};
-
 	/* This qspi setting included
 	 * The QSPI controller register and
 	 * The QSPI data register
