@@ -821,13 +821,14 @@ int cad_qspi_indirect_page_bound_write(struct cad_qspi_params *cad_params, uint3
 }
 
 int cad_qspi_read_bank(struct cad_qspi_params *cad_params, uint8_t *buffer, uint32_t offset,
-		       uint32_t size)
+				uint32_t size)
 {
 	int status;
 	uint32_t read_count = 0;
-	uint8_t *read_data = buffer;
-	int level = 1;
-	uint32_t read_bytes = 0;
+	uint32_t *read_data;
+	int level = 1, i;
+	uint32_t words_to_read = size/4;
+	uint8_t bytes_to_read = size%4;
 
 	if (cad_params == NULL) {
 		LOG_ERR("Wrong parameter\n");
@@ -841,16 +842,28 @@ int cad_qspi_read_bank(struct cad_qspi_params *cad_params, uint8_t *buffer, uint
 	}
 
 	while (read_count < size) {
-		level = CAD_QSPI_SRAMFILL_INDRDPART(
-			sys_read32(cad_params->reg_base + CAD_QSPI_SRAMFILL));
-		read_bytes = MIN(level * 4, size);
-		for (uint32_t i = 0; i < read_bytes; ++i) {
-			*read_data++ = sys_read8(cad_params->data_base);
-		}
+		do {
+			level = CAD_QSPI_SRAMFILL_INDRDPART(
+				sys_read32(cad_params->reg_base + CAD_QSPI_SRAMFILL));
+			read_data = (uint32_t *)(buffer + read_count);
+			for (i = 0; i < level; ++i) {
+				if (words_to_read) {
+					*read_data++ = sys_read32(cad_params->data_base);
+					words_to_read--;
+				} else {
+					uint32_t temp = sys_read32(cad_params->data_base);
 
-		read_count += read_bytes;
+					if (size > 4) {
+						buffer = buffer + (size/4)*sizeof(uint32_t);
+						memcpy(buffer, &temp, bytes_to_read);
+					} else {
+						memcpy(buffer, &temp, bytes_to_read);
+					}
+				}
+			}
+			read_count += level * sizeof(uint32_t);
+		} while (level > 0);
 	}
-
 	return 0;
 }
 
