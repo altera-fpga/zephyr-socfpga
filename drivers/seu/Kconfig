@@ -16,7 +16,7 @@ source "subsys/logging/Kconfig.template.log_config"
 
 config SEU_INIT_PRIORITY
 	int "SEU Initialization priority"
-	default 55
+	default 65
 	help
 	  Set the priority for the SEU driver initialization
 
