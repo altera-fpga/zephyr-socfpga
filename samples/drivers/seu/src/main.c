@@ -171,11 +171,6 @@ int main(void)
 	}
 	printk("The Client No is 0x%x\n", client_no_ecc);
 
-	if (ret != 0) {
-		printk("SEU callback function register enable failed\n");
-		return ret;
-	}
-
 	printk("SEU Safe Error Insert Test Started\n");
 
 	ret = inject_safe_seu_error(seu_dev);
