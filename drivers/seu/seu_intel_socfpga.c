@@ -292,7 +292,6 @@ static int32_t svc_client_close(struct seu_intel_socfpga_data *seu_data_ptr)
 
 	if (sip_svc_ptr == NULL) {
 		LOG_ERR("Retrieve private data failed");
-		k_mutex_unlock(sip_svc_ptr);
 		return -EINVAL;
 	}
 
@@ -446,18 +445,17 @@ static void seu_callback(uint32_t c_token, struct sip_svc_response *response)
 	uint32_t resp_len;
 	uint32_t error_detect_type;
 	uint32_t *resp_data;
+	struct private_data *priv;
 	int ret;
-
-	struct private_data *priv = (struct private_data *)response->priv_data;
-
-	priv->status = 0;
 
 	if (response == NULL) {
 		LOG_ERR("The callback response is NULL");
-		k_sem_give(&(priv->semaphore));
-		priv->status = -EINVAL;
 		return;
 	}
+
+	priv = (struct private_data *)response->priv_data;
+
+	priv->status = 0;
 
 	resp_data = (uint32_t *)response->resp_data_addr;
 	/* Right shift by 2 as the size is in bytes. */
@@ -777,9 +775,8 @@ static int intel_socfpga_insert_seu_error(const struct device *dev,
 					  struct inject_seu_error_frame *error_frame)
 {
 	uint32_t *cmd_addr = NULL, *resp_addr = NULL;
-	uint32_t cmd_size =
-		(sizeof(uint32_t) * (INJECT_SEU_ERR_CMD_SIZE + error_frame->error_inject));
-	uint32_t resp_size = (sizeof(uint32_t) * INJECT_SEU_ERR_RES_SIZE);
+	uint32_t cmd_size;
+	uint32_t resp_size;
 	struct private_data priv;
 	int ret;
 
@@ -790,6 +787,9 @@ static int intel_socfpga_insert_seu_error(const struct device *dev,
 		LOG_ERR("Input parameter value null");
 		return -EINVAL;
 	}
+
+	cmd_size = (sizeof(uint32_t) * (INJECT_SEU_ERR_CMD_SIZE + error_frame->error_inject));
+	resp_size = (sizeof(uint32_t) * INJECT_SEU_ERR_RES_SIZE);
 
 	resp_addr = (uint32_t *)k_malloc(resp_size);
 	if (resp_addr == NULL) {
