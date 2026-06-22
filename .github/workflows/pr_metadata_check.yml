@@ -34,7 +34,7 @@ jobs:
 
       - name: Run the check script
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           python -u scripts/ci/do_not_merge.py \
           -p "${{ github.event.pull_request.number }}" \

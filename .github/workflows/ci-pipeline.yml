@@ -1,0 +1,62 @@
+name: altera-zephyr-ci-pipeline
+###############################################################################
+# Altera SOCFPGA Linux Build Pipeline
+###############################################################################
+
+on:
+  pull_request:
+    branches: [ "socfpga_*" ]
+    types: [opened, synchronize, reopened, review_requested, review_submission]
+
+  # Allows to run this workflow manually from the Actions tab
+  workflow_dispatch:
+    inputs:
+      base_ref:
+        description: 'Base branch for coverity and test selection (defaults to repository default branch)'
+        required: false
+        default: ''
+      user_prompt:
+        description: 'User AGPT prompt for non-PR runs'
+        required: false
+        default: ''
+      test_tags:
+        description: 'Test tags JSON array string (e.g. "[\"all\"]")'
+        required: false
+        default: '[]'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  ci-pipeline:
+    uses: altera-innersource/applications.devops.build-bot.github-pr-workflow/.github/workflows/zephyr-ci-pipeline.yml@cicd-2026.04
+    secrets:
+      GIT_USER: ${{ secrets.GIT_USER }}
+      GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
+      AGPT_TOKEN: ${{ secrets.AGPT_TOKEN }}
+    with:
+      WORKFLOW_REPO_REF: cicd-2026.04
+      CI_EXEC_ROOT: ${{ vars.CI_EXEC_ROOT }}
+      base_ref: ${{ (github.event_name == 'pull_request' && github.event.pull_request.base.ref)
+                 || inputs.base_ref
+                 || github.event.repository.default_branch }}
+      user_prompt: ${{ github.event_name != 'pull_request' && inputs.user_prompt || '' }}
+      test_tags: ${{ github.event_name != 'pull_request' && inputs.test_tags || '[]' }}
+      src_repo: ${{ github.repository }}
+      head_ref: ${{ (github.event_name == 'pull_request' && github.head_ref) || github.ref_name }}
+      pr_number: ${{ github.event.pull_request.number }}
+      pr_title: ${{ github.event.pull_request.title }}
+      event_name: ${{ github.event_name }}
+
+  #wrapper around ci-pipeline/ci-check-pr-status for PR to capture status
+  ci-check-pr-status:
+    runs-on: [ arc, lapwing, workspace_type=tmp-workspace, mem=8000, _site=sc, git, python/3.12.10 ]
+    needs: [ci-pipeline]
+    if: always()
+    steps:
+      - name: On failure
+        if: ${{ needs.ci-pipeline.result != 'success' }}
+        run: |
+          echo "Pipeline failed!"
+          exit 1
