@@ -128,7 +128,7 @@ int main(void)
 		return ret;
 	}
 
-#if !defined(CONFIG_NOCACHE_MEMORY) && !defined(CONFIG_CCU_SUPPORT)
+#if !defined(CONFIG_NOCACHE_MEMORY) && !defined(CONFIG_DMA_DW_AXI_CCU_SUPPORT)
 	/* flush cached data*/
 	sys_cache_data_flush_range((void *)tx_data, XFERS * XFER_SIZE);
 #endif
@@ -148,7 +148,7 @@ int main(void)
 		return xfer_status;
 	}
 
-#if !defined(CONFIG_NOCACHE_MEMORY) && !defined(CONFIG_CCU_SUPPORT)
+#if !defined(CONFIG_NOCACHE_MEMORY) && !defined(CONFIG_DMA_DW_AXI_CCU_SUPPORT)
 	sys_cache_data_invd_range((void *)rx_data, XFERS * XFER_SIZE);
 #endif
 
