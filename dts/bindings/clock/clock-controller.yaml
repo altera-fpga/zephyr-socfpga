@@ -8,3 +8,8 @@ properties:
     type: int
     required: true
     description: Number of items to expect in a Clock specifier
+
+  sysmgr:
+    type: phandle
+    required: true
+    description: phandle to the syscon node backing sysmgr registers
