@@ -1,4 +1,4 @@
-/* dw_i2c.h - header for Design Ware I2C operations */
+/* i2c_dw.h - header for Design Ware I2C operations */
 
 /*
  * Copyright (c) 2015 Intel Corporation
@@ -10,6 +10,7 @@
 
 #include <zephyr/drivers/i2c.h>
 #include <stdbool.h>
+#include <zephyr/drivers/reset.h>
 
 #define DT_DRV_COMPAT snps_designware_i2c
 
@@ -105,8 +106,10 @@ struct i2c_dw_rom_config {
 #if defined(CONFIG_PINCTRL)
 	const struct pinctrl_dev_config *pcfg;
 #endif
-#if defined(CONFIG_RESET)
-	const struct reset_dt_spec reset;
+
+#if DT_ANY_INST_HAS_PROP_STATUS_OKAY(resets)
+	/* Reset controller device configurations */
+	struct reset_dt_spec reset_spec;
 #endif
 
 #if DT_ANY_INST_ON_BUS_STATUS_OKAY(pcie)
