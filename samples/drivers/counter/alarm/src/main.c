@@ -87,6 +87,11 @@ static void test_counter_interrupt_fn(const struct device *counter_dev,
 	uint64_t now_usec;
 	int now_sec;
 	int err;
+	struct  counter_top_cfg top_cfg = {
+		.callback = NULL,
+		.user_data = NULL,
+		.flags = 0
+	};
 
 	err = counter_get_value(counter_dev, &now_ticks);
 	if (!counter_is_counting_up(counter_dev)) {
@@ -106,6 +111,10 @@ static void test_counter_interrupt_fn(const struct device *counter_dev,
 
 	/* Set a new alarm with a double length duration */
 	config->ticks = config->ticks * 2U;
+
+	/* Set a new top value */
+	top_cfg.ticks = config->ticks;
+	err = counter_set_top_value(counter_dev, &top_cfg);
 
 	printk("Set alarm in %u sec (%u ticks)\n",
 	       (uint32_t)(counter_ticks_to_us(counter_dev,
