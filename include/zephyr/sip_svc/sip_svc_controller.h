@@ -107,12 +107,14 @@ struct sip_svc_controller {
 		((sip_num_clients <= CONFIG_ARM_SIP_SVC_SUBSYS_MAX_CLIENT_COUNT) &&                \
 		 (sip_num_clients > 0)),                                                           \
 		"Number of client should be within 1 and ARM_SIP_SVC_SUBSYS_MAX_CLIENT_COUNT");    \
+	static uint8_t async_resp_buf##inst[sip_resp_size] __aligned(64);                          \
 	static STRUCT_SECTION_ITERABLE(sip_svc_controller, sip_svc_##inst) = {                     \
 		.method = conduit_name,                                                            \
 		.dev = sip_dev,                                                                    \
 		.num_clients = sip_num_clients,                                                    \
 		.max_transactions = sip_max_transactions,                                          \
 		.resp_size = sip_resp_size,                                                        \
+		.async_resp_data = async_resp_buf##inst,                                           \
 	}
 
 #else
