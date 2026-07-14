@@ -81,6 +81,8 @@ struct sip_svc_controller {
 	uint8_t *async_resp_data;
 	/* Thread id of sip_svc thread */
 	k_tid_t tid;
+	/*Blocks the internal thread until a new transaction is enqueued*/
+	struct k_sem thread_sem;
 
 #if CONFIG_ARM_SIP_SVC_SUBSYS_SINGLY_OPEN
 	/* Atomic variable to restrict one client access */

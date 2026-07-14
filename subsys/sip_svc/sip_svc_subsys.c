@@ -663,7 +663,7 @@ static void sip_svc_thread(void *ctrl_ptr, void *arg2, void *arg3)
 			}
 		}
 		LOG_INF("Suspend thread, all transactions are completed");
-		k_thread_suspend(ctrl->tid);
+		k_sem_take(&ctrl->thread_sem, K_FOREVER);
 	}
 }
 
@@ -756,7 +756,7 @@ int sip_svc_send(void *ct, uint32_t c_token, struct sip_svc_request *request, si
 	}
 
 	LOG_INF("Wakeup sip_svc thread");
-	k_thread_resume(ctrl->tid);
+	k_sem_give(&ctrl->thread_sem);
 	k_mutex_unlock(&ctrl->data_mutex);
 
 	return (int)trans_id;
@@ -908,6 +908,7 @@ static int sip_svc_subsys_init(void)
 			sip_svc_thread, ctrl, NULL, NULL, CONFIG_ARM_SIP_SVC_SUBSYS_THREAD_PRIORITY,
 			K_ESSENTIAL, K_NO_WAIT);
 		k_thread_name_set(ctrl->tid, "sip_svc");
+		k_sem_init(&ctrl->thread_sem, 0, 1);
 
 		ctrl->active_job_cnt = 0;
 		ctrl->active_async_job_cnt = 0;
