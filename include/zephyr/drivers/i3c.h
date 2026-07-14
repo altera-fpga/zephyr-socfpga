@@ -50,6 +50,16 @@ extern "C" {
 #define I3C_OD_MIXED_BUS_THIGH_MAX_NS 41
 #define I3C_OD_FIRST_BC_THIGH_MIN_NS  200
 
+#define I3C_DCR_I2C_DEV_IDX_0				0
+#define I3C_DCR_I2C_DEV_IDX_1				1
+#define I3C_DCR_I2C_DEV_IDX_2				2
+
+#define I3C_DCR_I2C_DEV_IDX_SHIFT			5
+#define I3C_DCR_I2C_DEV_IDX_MASK			(0x07U << I3C_DCR_I2C_DEV_IDX_SHIFT)
+
+#define I3C_DCR_I2C_DEV_IDX(dcr)			\
+	(((dcr) & I3C_DCR_I2C_DEV_IDX_MASK) >> I3C_DCR_I2C_DEV_IDX_SHIFT)
+
 /**
  * @name Bus Characteristic Register (BCR)
  * @anchor I3C_BCR

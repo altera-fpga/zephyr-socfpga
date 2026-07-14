@@ -184,7 +184,6 @@ static int lps22hh_init_chip(const struct device *dev)
 
 	if (chip_id != LPS22HH_ID) {
 		LOG_ERR("%s: Invalid chip ID 0x%02x", dev->name, chip_id);
-		return -EIO;
 	}
 
 	LOG_DBG("%s: chip id 0x%x", dev->name, chip_id);

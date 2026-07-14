@@ -12,3 +12,11 @@ include: [i3c-controller.yaml, pinctrl-device.yaml]
 properties:
   clocks:
     required: true
+
+  core-clk:
+    type: int
+    description: I3C functional/core clock frequency in Hz
+
+  resets:
+    type: phandle-array
+    description: Reset controller specifier for the I3C block

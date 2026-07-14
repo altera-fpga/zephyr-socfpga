@@ -5,6 +5,7 @@
  */
 
 #include <zephyr/drivers/i3c.h>
+#include <zephyr/drivers/i2c.h>
 #include <zephyr/shell/shell.h>
 #include <stdlib.h>
 #include <string.h>
@@ -935,6 +936,115 @@ static int cmd_i3c_ccc_setmrl_bc(const struct shell *sh, size_t argc, char **arg
 	}
 
 	shell_print(sh, "I3C: SETMRL BC Sent");
+
+	return ret;
+}
+
+/* i3c i2c_write <device> <dev_addr> <reg_addr> [<byte1>, ...] */
+static int i2c_write_from_buffer(const struct shell *sh, char *s_dev_name,
+				 char *s_dev_addr, char *s_reg_addr,
+				 char **data, uint8_t data_length)
+{
+	uint8_t buf[MAX_I3C_BYTES + MAX_BYTES_FOR_REGISTER_INDEX - 1];
+	const struct device *dev;
+	int reg_addr_bytes;
+	int reg_addr;
+	int dev_addr;
+	int ret;
+	int i;
+
+	dev = shell_device_get_binding(s_dev_name);
+	if (!dev) {
+		shell_error(sh, "I2C: Device driver %s not found.", s_dev_name);
+		return -ENODEV;
+	}
+
+	dev_addr = strtol(s_dev_addr, NULL, 16);
+	reg_addr = strtol(s_reg_addr, NULL, 16);
+	reg_addr_bytes = get_bytes_count_for_hex(s_reg_addr);
+	sys_put_be32(reg_addr, buf);
+
+	if (data_length + reg_addr_bytes > MAX_I3C_BYTES) {
+		data_length = MAX_I3C_BYTES - reg_addr_bytes;
+		shell_info(sh, "Too many bytes provided, limit is %d",
+			   MAX_I3C_BYTES - reg_addr_bytes);
+	}
+
+	for (i = 0; i < data_length; i++) {
+		buf[MAX_BYTES_FOR_REGISTER_INDEX + i] =
+			(uint8_t)strtol(data[i], NULL, 16);
+	}
+
+	ret = i2c_write(dev, buf + MAX_BYTES_FOR_REGISTER_INDEX - reg_addr_bytes,
+			reg_addr_bytes + data_length, dev_addr);
+	if (ret < 0) {
+		shell_error(sh, "Failed to write to device: %s", s_dev_addr);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+static int cmd_i3c_i2c_write(const struct shell *sh, size_t argc, char **argv)
+{
+	return i2c_write_from_buffer(sh, argv[ARGV_DEV], argv[ARGV_TDEV],
+				     argv[ARGV_REG], &argv[4], argc - 4);
+}
+
+/* i3c i2c_read <device> <dev_addr> <reg_addr> [<numbytes>] */
+static int i2c_read_to_buffer(const struct shell *sh, char *s_dev_name,
+			      char *s_dev_addr, char *s_reg_addr,
+			      uint8_t *buf, uint8_t buf_length)
+{
+	const struct device *dev;
+	uint8_t reg_addr_buf[MAX_BYTES_FOR_REGISTER_INDEX];
+	int reg_addr_bytes;
+	int reg_addr;
+	int dev_addr;
+	int ret;
+
+	dev = shell_device_get_binding(s_dev_name);
+	if (!dev) {
+		shell_error(sh, "I2C: Device driver %s not found.", s_dev_name);
+		return -ENODEV;
+	}
+
+	dev_addr = strtol(s_dev_addr, NULL, 16);
+	reg_addr = strtol(s_reg_addr, NULL, 16);
+	reg_addr_bytes = get_bytes_count_for_hex(s_reg_addr);
+	sys_put_be32(reg_addr, reg_addr_buf);
+
+	ret = i2c_write_read(dev, dev_addr,
+			     reg_addr_buf + MAX_BYTES_FOR_REGISTER_INDEX - reg_addr_bytes,
+			     reg_addr_bytes, buf, buf_length);
+	if (ret < 0) {
+		shell_error(sh, "Failed to read from device: %s", s_dev_addr);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+static int cmd_i3c_i2c_read(const struct shell *sh, size_t argc, char **argv)
+{
+	uint8_t buf[MAX_I3C_BYTES];
+	int num_bytes;
+	int ret;
+
+	if (argc > 4) {
+		num_bytes = strtol(argv[4], NULL, 16);
+		if (num_bytes > MAX_I3C_BYTES) {
+			num_bytes = MAX_I3C_BYTES;
+		}
+	} else {
+		num_bytes = MAX_I3C_BYTES;
+	}
+
+	ret = i2c_read_to_buffer(sh, argv[ARGV_DEV], argv[ARGV_TDEV],
+				 argv[ARGV_REG], buf, num_bytes);
+	if (ret == 0) {
+		shell_hexdump(sh, buf, num_bytes);
+	}
 
 	return ret;
 }
@@ -2418,6 +2528,14 @@ SHELL_STATIC_SUBCMD_SET_CREATE(
 		      "Write a byte to an I3C device\n"
 		      "Usage: write_byte <device> <target> <reg> <value>",
 		      cmd_i3c_write_byte, 5, 0),
+	SHELL_CMD_ARG(i2c_write, &dsub_i3c_device_name,
+		      "Write bytes to an I2C device\n"
+		      "Usage: i2c_write <device> <dev_addr> <reg_addr> [<byte1>, ...]",
+		      cmd_i3c_i2c_write, 4, MAX_I3C_BYTES),
+	SHELL_CMD_ARG(i2c_read, &dsub_i3c_device_name,
+		      "Read bytes from an I2C device\n"
+		      "Usage: i2c_read <device> <dev_addr> <reg_addr> [<bytes>]",
+		      cmd_i3c_i2c_read, 4, 1),
 	SHELL_CMD_ARG(i3c_attach, &dsub_i3c_device_list_name,
 		      "Attach I3C device from the bus\n"
 		      "Usage: i3c_attach <device> <target>",

@@ -84,7 +84,18 @@ static int clock_get_rate(const struct device *dev, clock_control_subsys_t sub_s
 	return 0;
 }
 
+static int agilex5_clock_control_on(const struct device *dev, clock_control_subsys_t sys)
+{
+	ARG_UNUSED(dev);
+	ARG_UNUSED(sys);
+
+	LOG_DBG("Intel Agilex5 clock control on success!");
+
+	return 0;
+}
+
 static DEVICE_API(clock_control, clock_api) = {
+	.on = agilex5_clock_control_on,
 	.get_rate = clock_get_rate,
 };
 
