@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2023 Intel Corporation
+ * Copyright (c) 2026 Altera Corporation
 
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -12,7 +13,11 @@
 
 #if defined(CONFIG_DMA_DW_AXI)
 #define DMA DT_COMPAT_GET_ANY_STATUS_OKAY(snps_designware_dma_axi)
+#else
+#error "Unsupported DMA driver"
 #endif
+
+#define DMA_COMPLETE_TIMEOUT_MS   K_MSEC(1000)
 
 /* Number of block to transfer */
 #ifndef XFERS
@@ -40,8 +45,8 @@ volatile int xfer_status;
 static struct k_sem dma_complete;
 
 /* transfer and receive buffers */
-static uint8_t tx_data[XFERS][XFER_SIZE] __nocache;
-static uint8_t rx_data[XFERS][XFER_SIZE] __nocache;
+static uint8_t tx_data[XFERS][XFER_SIZE] __nocache __aligned(64);
+static uint8_t rx_data[XFERS][XFER_SIZE] __nocache __aligned(64);
 
 static void dma_callback(const struct device *dev, void *user_data, uint32_t channel, int status)
 {
@@ -59,7 +64,7 @@ int main(void)
 	uint8_t i, j;
 	static int chan_id;
 	struct dma_config dma_cfg = {0};
-	static struct dma_block_config dma_block_cfgs[XFERS];
+	static struct dma_block_config dma_block_cfgs[XFERS] __nocache;
 	const struct device *const dma_dev = DEVICE_DT_GET(DMA);
 
 	printk("Sample application for Memory to Memory transfer using dma controller\n");
@@ -100,7 +105,7 @@ int main(void)
 	 * if there are any dma transfer errors, callback will be invoked if
 	 * error_callback_en = 0
 	 */
-	dma_cfg.error_callback_dis = 0;
+	dma_cfg.error_callback_dis = 1;
 
 	memset((void *)dma_block_cfgs, 0, sizeof(dma_block_cfgs));
 
@@ -131,6 +136,7 @@ int main(void)
 #if !defined(CONFIG_NOCACHE_MEMORY) && !defined(CONFIG_DMA_DW_AXI_CCU_SUPPORT)
 	/* flush cached data*/
 	sys_cache_data_flush_range((void *)tx_data, XFERS * XFER_SIZE);
+	sys_cache_data_flush_range((void *)dma_block_cfgs, XFERS);
 #endif
 
 	/* start dma transfer */
@@ -140,7 +146,11 @@ int main(void)
 		return ret;
 	}
 
-	(void)k_sem_take(&dma_complete, K_FOREVER);
+	ret = k_sem_take(&dma_complete, DMA_COMPLETE_TIMEOUT_MS);
+	if (ret == -EAGAIN) {
+		printk("DMA transfer timed out\n");
+		return ret;
+	}
 
 	/* check if dma transfer encountered any error */
 	if (xfer_status) {
