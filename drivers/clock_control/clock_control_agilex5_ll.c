@@ -230,10 +230,9 @@ uint32_t get_timer_clk(const struct device *sysmgr)
 /* Calculate clock frequency to be used for QSPI driver */
 uint32_t get_qspi_clk(const struct device *sysmgr)
 {
-	uint32_t scr_reg, ref_clk;
+	uint32_t ref_clk;
 
-	syscon_read_reg(sysmgr, SOCFPGA_SYSMGR_BOOT_SCRATCH_COLD_0, &scr_reg);
-	ref_clk = sys_read32(scr_reg);
+	syscon_read_reg(sysmgr, SOCFPGA_SYSMGR_BOOT_SCRATCH_COLD_0, &ref_clk);
 
 	/*
 	 * In ATF, the qspi clock is divided by 1000 and loaded in scratch cold register 0
