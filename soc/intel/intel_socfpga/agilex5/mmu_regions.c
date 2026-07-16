@@ -38,6 +38,13 @@ static const struct arm_mmu_region mmu_regions[] = {
 			      DT_REG_ADDR(DT_NODELABEL(its)),
 			      DT_REG_SIZE(DT_NODELABEL(its)),
 			      MT_DEVICE_nGnRnE | MT_P_RW_U_RW | MT_DEFAULT_SECURE_STATE),
+
+#if DT_NODE_EXISTS(DT_NODELABEL(mbox_ddr))
+	MMU_REGION_FLAT_ENTRY("MBOX_DDR",
+			      DT_REG_ADDR(DT_NODELABEL(mbox_ddr)),
+			      DT_REG_SIZE(DT_NODELABEL(mbox_ddr)),
+			      MT_NORMAL | MT_P_RW_U_RW | MT_DEFAULT_SECURE_STATE),
+#endif
 };
 
 const struct arm_mmu_config mmu_config = {

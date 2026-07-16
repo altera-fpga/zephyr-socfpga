@@ -102,6 +102,13 @@
 		reg = <0x80100000 DT_SIZE_M(8)>;
 	};
 
+	/* SiP mailbox buffers for TF-A (must be >= BL31_LIMIT) */
+	mbox_ddr: memory@82000000 {
+		compatible = "zephyr,memory-region", "mmio-sram";
+		reg = <0x82000000 0x10000>;
+		zephyr,memory-region = "MBOX_DDR";
+	};
+
 	/* This qspi setting included
 	 * The QSPI controller register and
 	 * The QSPI data register
