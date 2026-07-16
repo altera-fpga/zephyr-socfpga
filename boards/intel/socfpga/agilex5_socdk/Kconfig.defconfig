@@ -6,3 +6,18 @@ config HAS_COVERAGE_SUPPORT
 
 config MAX_THREAD_BYTES
 	default 5
+
+configdefault NET_L2_ETHERNET
+	default y
+
+configdefault NET_TX_STACK_SIZE
+	default 2048
+
+configdefault NET_RX_STACK_SIZE
+	default 2048
+
+configdefault NET_MGMT_EVENT_STACK_SIZE
+	default 1024
+
+configdefault NET_SOCKETS_SERVICE_STACK_SIZE
+	default 3072

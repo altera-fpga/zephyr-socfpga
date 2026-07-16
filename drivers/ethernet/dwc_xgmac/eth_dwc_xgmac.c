@@ -9,9 +9,8 @@
 #include "eth_dwc_xgmac_priv.h"
 #include <zephyr/cache.h>
 
-#define LOG_MODULE_NAME eth_dwc_xgmac
-#define LOG_LEVEL       CONFIG_ETHERNET_LOG_LEVEL
-LOG_MODULE_REGISTER(LOG_MODULE_NAME, LOG_LEVEL);
+#include <zephyr/logging/log.h>
+LOG_MODULE_REGISTER(eth_dwc_xgmac, CONFIG_ETHERNET_LOG_LEVEL);
 
 #define ETH_XGMAC_CHECK_RESET(inst) DT_NODE_HAS_PROP(DT_DRV_INST(inst), resets)
 
@@ -880,6 +879,9 @@ static void eth_dwc_xgmac_isr(const struct device *dev)
 
 	if (!data->dev_started || data->link_speed == LINK_DOWN ||
 	    (!net_if_flag_is_set(data->iface, NET_IF_UP))) {
+		(void)sys_read32(ioaddr + XGMAC_CORE_BASE_ADDR_OFFSET +
+				 CORE_MAC_INTERRUPT_STATUS_OFST);
+
 		dma_int_status =
 			sys_read32(ioaddr + XGMAC_DMA_BASE_ADDR_OFFSET + DMA_INTERRUPT_STATUS_OFST);
 		for (uint32_t x = 0; x < config->num_dma_chnl; x++) {
@@ -1645,7 +1647,6 @@ static const struct ethernet_api eth_dwc_xgmac_apis = {
 	.stop = eth_dwc_xgmac_stop_device,
 	.get_capabilities = eth_dwc_xgmac_get_capabilities,
 	.set_config = eth_dwc_xgmac_set_config,
-	.get_config = eth_dwc_xgmac_get_config,
 #ifdef CONFIG_NET_STATISTICS_ETHERNET
 	.get_stats = eth_dwc_xgmac_stats,
 #endif /* CONFIG_NET_STATISTICS_ETHERNET */
