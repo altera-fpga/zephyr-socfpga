@@ -60,7 +60,6 @@ LOG_MODULE_REGISTER(dma_designware_axi, CONFIG_DMA_LOG_LEVEL);
 #define DMA_DW_AXI_AXCACHE_READ_ALLOC     BIT(2)
 #define DMA_DW_AXI_AXCACHE_WRITE_ALLOC    BIT(3)
 
-
 /* AXI AxPROT[2:0]
  * AxProt[0]:
  *	1: Privileged access 0: unprivileged access
@@ -719,7 +718,7 @@ static int dma_dw_axi_config(const struct device *dev, uint32_t channel,
 
 #if !defined(CONFIG_NOCACHE_MEMORY) && !defined(CONFIG_DMA_DW_AXI_CCU_SUPPORT)
 	sys_cache_data_flush_range((void *)chan_data->lli_desc_base,
-				sizeof(struct dma_lli) * cfg->block_count);
+				   sizeof(struct dma_lli) * cfg->block_count);
 #endif
 
 
