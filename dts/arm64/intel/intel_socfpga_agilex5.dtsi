@@ -477,6 +477,6 @@
 		interrupts = <GIC_SPI 164 IRQ_TYPE_LEVEL IRQ_DEFAULT_PRIORITY>;
 		core-clk = <200000000>;
 		clocks = <&clock INTEL_SOCFPGA_CLOCK_I3C>;
-		status = "okay";
+		status = "disabled";
 	};
 };
