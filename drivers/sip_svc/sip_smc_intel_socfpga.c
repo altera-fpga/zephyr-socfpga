@@ -154,12 +154,22 @@ static int intel_sip_smc_plat_async_res_res(const struct device *dev, struct arm
 {
 	ARG_UNUSED(dev);
 	uint32_t *resp = (uint32_t *)buf;
-
-	sys_cache_data_invd_range(resp, res->a3);
+	size_t inv_len;
 
 	__ASSERT((res && buf && size && trans_id), "invalid parameters\n");
 
 	if (((long)res->a0) <= SMC_STATUS_OKAY) {
+		/*
+		 * TF-A returned OK with a3==0 for header-only
+		 * mailbox responses (e.g. CANCEL). Invalidate at least the
+		 * header word so EL1 does not reuse a stale cached header.
+		 */
+		inv_len = res->a3;
+		if (inv_len < sizeof(uint32_t)) {
+			inv_len = sizeof(uint32_t);
+		}
+		sys_cache_data_invd_range(resp, inv_len);
+
 		/* Extract transaction id from mailbox response header */
 		*trans_id = SIP_SVC_MB_HEADER_GET_TRANS_ID(resp[0]);
 		/* The final length should include both header and body */
