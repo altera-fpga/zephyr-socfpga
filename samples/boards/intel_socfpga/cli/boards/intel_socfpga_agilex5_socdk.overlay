@@ -8,6 +8,10 @@
  * board.
  */
 
+&qspi {
+	status = "okay";
+};
+
 &timer0 {
 	status = "okay";
 };

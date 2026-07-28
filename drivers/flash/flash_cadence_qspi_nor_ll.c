@@ -610,6 +610,8 @@ void cad_qspi_calibration(struct cad_qspi_params *cad_params, uint32_t dev_clk,
 	last_pass = -1;
 
 	do {
+		sys_write32(CAD_QSPI_RDDATACAP_BYP(1) | CAD_QSPI_RDDATACAP_DELAY(data_cap_delay),
+			    cad_params->reg_base + CAD_QSPI_RDDATACAP);
 
 		status = cad_qspi_stig_read_cmd(cad_params, CAD_QSPI_STIG_OPCODE_RDID, 0, 3, &rdid);
 		if (status != 0) {
@@ -619,20 +621,15 @@ void cad_qspi_calibration(struct cad_qspi_params *cad_params, uint32_t dev_clk,
 		if (rdid == sample_rdid) {
 			if (first_pass == -1) {
 				first_pass = data_cap_delay;
-			} else {
-				last_pass = data_cap_delay;
 			}
+			last_pass = data_cap_delay;
 		}
 
 		data_cap_delay++;
-
-		sys_write32(CAD_QSPI_RDDATACAP_BYP(1) | CAD_QSPI_RDDATACAP_DELAY(data_cap_delay),
-			    cad_params->reg_base + CAD_QSPI_RDDATACAP);
-
 	} while (data_cap_delay < 0x10);
 
-	if (first_pass > 0) {
-		int diff = first_pass - last_pass;
+	if (first_pass >= 0) {
+		int diff = last_pass - first_pass;
 
 		data_cap_delay = first_pass + diff / 2;
 	}
