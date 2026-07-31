@@ -166,6 +166,9 @@ static int sdhc_cdns_program_phy_reg(struct sdhc_cdns_combo_phy *sdhc_cdns_combo
 	uint32_t value = 0;
 	int ret = 0;
 
+	/* Step 1, switch on DLL_RESET */
+	sys_clear_bits(cdns_params.reg_base + SDHC_CDNS_HRS09, CDNS_HRS09_PHY_SW_RESET);
+
 	/*
 	 * program PHY_DQS_TIMING_REG
 	 * This register controls the DQS related timing
@@ -242,10 +245,9 @@ static int sdhc_cdns_program_phy_reg(struct sdhc_cdns_combo_phy *sdhc_cdns_combo
 	sys_write32(value, cdns_params.reg_base + SDHC_CDNS_HRS05);
 
 	/* switch off DLL_RESET */
+	sys_set_bits(cdns_params.reg_base + SDHC_CDNS_HRS09, CDNS_HRS09_PHY_SW_RESET);
 	do {
-		value = sys_read32(cdns_params.reg_base + SDHC_CDNS_HRS09);
-		value |= CDNS_HRS09_PHY_SW_RESET;
-		sys_write32(value, cdns_params.reg_base + SDHC_CDNS_HRS09);
+		k_usleep(10);
 		value = sys_read32(cdns_params.reg_base + SDHC_CDNS_HRS09);
 	/* polling PHY_INIT_COMPLETE */
 	} while ((value & CDNS_HRS09_PHY_INIT_COMP) != CDNS_HRS09_PHY_INIT_COMP);
@@ -416,7 +418,7 @@ static int sdhc_cdns_set_ios(unsigned int clk, unsigned int width)
 }
 
 /* Programming HRS register for initialisation */
-static void sdhc_cdns_init_hrs_io(void)
+static void sdhc_cdns_init_hrs_io(struct sdhc_cdns_sdmmc *sdhc_cdns_sdmmc_reg)
 {
 	uint32_t value;
 
@@ -424,14 +426,13 @@ static void sdhc_cdns_init_hrs_io(void)
 		CDNS_HRS09_RDCMD_EN_BIT | CDNS_HRS09_RDDATA_EN_BIT);
 	sys_set_bits(cdns_params.reg_base + SDHC_CDNS_HRS09, value);
 
-	value = SDHC_HRS10_HCSDCLKADJ(3);
-	sys_set_bits(cdns_params.reg_base + SDHC_CDNS_HRS10, value);
+	value = SDHC_HRS10_HCSDCLKADJ(sdhc_cdns_sdmmc_reg->sdhc_hcsdclkadj);
+	sys_write32(value, cdns_params.reg_base + SDHC_CDNS_HRS10);
 
-	value = 0;
-	sys_set_bits(cdns_params.reg_base + SDHC_CDNS_HRS16, value);
+	sys_write32(0, cdns_params.reg_base + SDHC_CDNS_HRS16);
 
-	value = CDNS_HRS07_RW_COMPENSATE(10);
-	sys_set_bits(cdns_params.reg_base + SDHC_CDNS_HRS07, value);
+	value = (CDNS_HRS07_RW_COMPENSATE(sdhc_cdns_sdmmc_reg->sdhc_rw_compensate));
+	sys_write32(value, cdns_params.reg_base + SDHC_CDNS_HRS07);
 }
 
 static int sdhc_cdns_reset(void)
@@ -441,7 +442,7 @@ static int sdhc_cdns_reset(void)
 	sys_clear_bits(cdns_params.reg_base + SDHC_CDNS_SRS11, 0xFFFF);
 
 	/* Software reset */
-	sys_set_bit(cdns_params.reg_base + SDHC_CDNS_HRS00, CDNS_HRS00_SWR);
+	sys_set_bits(cdns_params.reg_base + SDHC_CDNS_HRS00, CDNS_HRS00_SWR);
 
 	/* Wait status command response ready */
 	timeout = CARD_REG_TIME_DELAY_US;
@@ -450,9 +451,6 @@ static int sdhc_cdns_reset(void)
 		LOG_ERR("Software reset is not completed...timedout");
 		return -ETIMEDOUT;
 	}
-
-	/* Step 1, switch on DLL_RESET */
-	sys_clear_bit(cdns_params.reg_base + SDHC_CDNS_HRS09, CDNS_HRS09_PHY_SW_RESET);
 
 	return 0;
 }
@@ -467,7 +465,7 @@ static int sdhc_cdns_init(void)
 		return ret;
 	}
 
-	sdhc_cdns_init_hrs_io();
+	sdhc_cdns_init_hrs_io(&sdhc_cdns_sdmmc_reg_info);
 
 	sdhc_cdns_vol_reset(true);
 

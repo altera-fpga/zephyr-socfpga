@@ -12,6 +12,17 @@
 	status = "okay";
 };
 
+&sdmmc {
+	status = "okay";
+
+	mmc {
+		/*SD Disk Access */
+		compatible = "zephyr,sdmmc-disk";
+		disk-name = "SD";
+		status = "okay";
+	};
+};
+
 &timer0 {
 	status = "okay";
 };
