@@ -7,6 +7,9 @@ config HAS_COVERAGE_SUPPORT
 config MAX_THREAD_BYTES
 	default 5
 
+configdefault NOCACHE_MEMORY
+	default y
+
 configdefault NET_L2_ETHERNET
 	default y
 

@@ -120,6 +120,18 @@ static int reset(const struct device *dev)
 	uint32_t timeout = 12U;
 	uint16_t value;
 
+#if CONFIG_BOARD_INTEL_SOCFPGA_AGILEX5_SOCDK_AGILEX5
+#define MII_MARVELL_PHY_PAGE          22
+#define MIIM_88E151x_PHY_MSCR         21
+#define MIIM_88E151x_RGMII_RXTX_DELAY (BIT(5) | BIT(4))
+	phy_mii_reg_write(dev, MII_MARVELL_PHY_PAGE, 2);
+	phy_mii_reg_read(dev, MIIM_88E151x_PHY_MSCR, &value);
+	/* Clear TX/RX delay bits */
+	value &= ~MIIM_88E151x_RGMII_RXTX_DELAY;
+	phy_mii_reg_write(dev, MIIM_88E151x_PHY_MSCR, value);
+	phy_write(dev, MII_MARVELL_PHY_PAGE, 0);
+#endif
+
 	/* Issue a soft reset */
 	if (phy_mii_reg_write(dev, MII_BMCR, MII_BMCR_RESET) < 0) {
 		return -EIO;
